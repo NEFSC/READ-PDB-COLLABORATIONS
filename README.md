@@ -26,8 +26,9 @@ Our goal is to build a community of practice around sharing code and tools to ma
 - Code examples should include:
   - A short description of the code example at the top of the file
 - Use the [GitHub interface or the command line](https://docs.github.com/en/repositories/working-with-files/managing-files/renaming-a-file) (recommended approach) if you need to move or rename files to preserve their commit history.
+- For the sake of simplicity, the intent is to have a single Main branch of the repository. So please do not make new branches.
   
-The expectation is that contributions to this repository will still be works in progress with documentation and development still in progress so sharing ugly first drafts is encouraged.
+The expectation is that contributions to this repository will still be works in progress with documentation and development still in progress so sharing ugly first drafts is encouraged. *Furthermore, all contributions should be considered developmental with no guarantees on their accuracy or proper functionality; use at your own risk!*
 
 #### Types of collaborators
 
