@@ -4,4 +4,6 @@ This sub-directory contains WHAM support functions and use examples that are not
 
 | File | Description |
 | ---- | ----------- |
+| example_function.R    |  Placeholder description so table populates           |
 |      |             |
+
