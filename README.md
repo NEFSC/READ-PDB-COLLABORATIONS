@@ -41,6 +41,7 @@ The expectation is that contributions to this repository will still be works in 
   - General users can still make contributions through pull requests or contacting a formal collaborator (see list of major contributors on the right side of the Github repository).
   - The repo is public and so anyone will be able to access all of the code on the repo.
   - General users do not need a username within the NEFSC organization.
+  - Learn more about Github: [basics in 10 minutes](https://www.freecodecamp.org/news/learn-the-basics-of-git-in-under-10-minutes-da548267cc91/) or [for beginners](https://product.hubspot.com/blog/git-and-github-tutorial-for-beginners) or [more for beginners](https://www.simplilearn.com/tutorials/git-tutorial/git-tutorial-for-beginner).
 
 ### Folders
 See README files within each folder for detailed descriptions of the files they contain. The use of sub-folders is discouraged to simplify referencing file paths and stabalize the use of hyperlinks to code.
