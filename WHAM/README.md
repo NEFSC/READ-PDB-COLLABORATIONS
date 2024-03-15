@@ -4,6 +4,6 @@ This sub-directory contains WHAM support functions and use examples that are not
 
 | File | Description | Initial Contributor |
 | ---- | ----------- | ------------------- |
-| example_function.R    |  Placeholder description so table populates           | William E. Ricker |
+| compareWHAMslides.R    |  Function generates comparison slides (pptx or html) using auto-generated WHAM plot outputs. | Amanda Hart |
 |      |             |                     |
 
