@@ -5,5 +5,6 @@ This sub-directory contains WHAM support functions and use examples that are not
 | File | Description | Initial Contributor |
 | ---- | ----------- | ------------------- |
 | compareWHAMslides.R    |  Function generates comparison slides (pptx or html) using auto-generated WHAM plot outputs. | Amanda Hart |
+| drop_term_index_retro.R | Drops some or all of the indices from the terminal year of each peel of retrospective to see how the NAA devs and retro change. Reliant on the fit_hindcast and plotNAAfxn. | Jon Deroba |
 |      |             |                     |
 
