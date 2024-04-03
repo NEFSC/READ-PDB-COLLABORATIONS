@@ -1,10 +1,10 @@
 #' @title Calculate the amount of fish dying given M 
 #' 
-#' @description Calculates the amount (metric tons) of fish dying given the assumed or estimated M; uses Jan-1 biomass, so an approximation
+#' @description Calculates the amount (000s metric tons) of fish dying given the assumed or estimated M; uses Jan-1 biomass, so an approximation
 #' 
 #' @param mod An rds from a WHAM fit
 #' 
-#' @return A dataframe with two columns. Year and Deaths
+#' @return A dataframe with two columns. Year and Deaths(000s mt)
 #'
 #' @example
 #' mod.dir="m168"
