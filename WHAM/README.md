@@ -11,5 +11,5 @@ This sub-directory contains WHAM support functions and use examples that are not
 | Mdeaths.R | Calculate deaths (000s mt) due to M | Jon Deroba |
 | do_selftest.R | Perform simulation self-tests of fitted WHAM model | Charles Perretti / Brian Stock |
 | make_simtest_plots.R | Plot simulation self-tests | Charles Perretti / Chris Legault |
-|      |             |                     |
+| sim_fn.R | Self-simulation function | Charles Perretti / Brian Stock |
 
