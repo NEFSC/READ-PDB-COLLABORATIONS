@@ -95,7 +95,7 @@ pullResults_WHAM <- function(model = NULL,
   # Annual SSB
   SSB.yr <- calc.uncertainty(log.est = model_est$log_SSB, log.se = model_sd$log_SSB) %>% mutate(YEAR = model$years, .before = "est") %>%
     mutate(relSSB = est/model_SSBproxy["est"]) %>% #!!! confirm this is working as desired
-    calc.rho.adj.ests(., rho = Mohns_rho$SSB) %>% 
+    calc.rho.adj.ests(., rho = Mohns_rho["SSB"]) %>%  # !!! confirm that ["SSB"] syntax works for multi-wham
     mutate(relSSB.adj= est.adj/model_SSBproxy["est"])
   
   return_list$SSB.yr <- SSB.yr %>% select(Year = YEAR, SSB = est, SSB.CV = CV)
@@ -104,10 +104,10 @@ pullResults_WHAM <- function(model = NULL,
   # Recruitment
   if(multiWHAM == TRUE){
     Rect.yr <- calc.uncertainty(log.est = model_est$log_NAA_rep[1,,,1], log.se = model_sd$log_NAA_rep[1,,,1]) %>% mutate(YEAR = model$years, .before = "est") %>%
-      calc.rho.adj.ests(., rho = Mohns_rho$naa[1]) # !!! confirm naa indexing for mohn's rho works across single and multi-wham options
+      calc.rho.adj.ests(., rho = Mohns_rho$naa[1]) # !!! confirm naa indexing for mohn's rho works across multi-wham options
   } else{
     Rect.yr <- calc.uncertainty(log.est = model_est$log_NAA_rep[,1], log.se = model_sd$log_NAA_rep[,1]) %>% mutate(YEAR = model$years, .before = "est") %>%
-      calc.rho.adj.ests(., rho = Mohns_rho$naa[1]) # !!! confirm naa indexing for mohn's rho works across single and multi-wham options
+      calc.rho.adj.ests(., rho = Mohns_rho["Rect"]) 
   }
   
   return_list$Rect.yr <- Rect.yr %>% select(Year = YEAR, Rect = est, Rect.CV = CV)
