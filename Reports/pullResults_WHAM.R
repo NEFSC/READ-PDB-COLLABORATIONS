@@ -85,7 +85,7 @@ pullResults_WHAM <- function(model = NULL,
   } else{
     F.yr <- calc.uncertainty(log.est = model_est$log_F, log.se = model_sd$log_F) %>% mutate(YEAR = model$years, .before = "est") %>%
       mutate(relF = est/model_Fproxy["est"]) %>%
-      calc.rho.adj.ests(., rho = Mohns_rho["Fbar"]) %>%
+      calc.rho.adj.ests(., rho = Mohns_rho["F"]) %>%
       mutate(relF.adj = est.adj/model_Fproxy["est"])
   }
   
@@ -115,18 +115,63 @@ pullResults_WHAM <- function(model = NULL,
   
   # Condense terminal year estimates with CIs
   model.lyr = tail(model$years, n=1)
-  termyr.ests.cis <- bind_rows(
-    F = filter(F.yr, YEAR == model.lyr) %>% rename(BRP.ratio = relF, BRP.ratio.adj = relF.adj),
-    SSB = filter(SSB.yr, YEAR == model.lyr) %>% rename(BRP.ratio = relSSB, BRP.ratio.adj = relSSB.adj),
-    .id = "Parameter") %>%
-    bind_rows(., filter(Rect.yr, YEAR == model.lyr) %>% mutate(Parameter = "Rect")) %>%
-    select(Parameter, est, CV, lo_95, hi_95, lo_90, hi_90, BRP.ratio, est.adj, lo.adj, hi.adj, BRP.ratio.adj) 
+  
+  F = filter(F.yr, YEAR == model.lyr) %>% rename(BRP.ratio = relF, BRP.ratio.adj = relF.adj)
+  # names(F)[7]  = "BRP.ratio"                 # Set up F
+  # names(F)[11] = "BRP.ratio.adj"
+  
+  SSB = filter(SSB.yr, YEAR == model.lyr) %>% rename(BRP.ratio = relSSB, BRP.ratio.adj = relSSB.adj)
+  # names(SSB)[7]  = "BRP.ratio"               # Set up SSB
+  # names(SSB)[11] = "BRP.ratio.adj"
+  
+  # Pull terminal estimates 
+  if(model$input$data$n_fleets > 1){ # If multiple fleets
+    for (i in 1:ncol(F)) {
+      F[,i] = as.numeric(F[,i])
+    }
+    for (i in 1:ncol(SSB)) {
+      SSB[,i] = as.numeric(SSB[,i])            # Negating Single-WHAM issues of class
+    }
+    
+    F_fleet <- NULL
+    for(ifleet in 1:model$input$data$n_fleets){
+      F_fleet[[ifleet]] <-  F[grep(paste0(".", ifleet), colnames(F))]
+      colnames(F_fleet[[ifleet]]) <- c("est", "CV", "lo_90", "hi_90", "lo_95", "hi_95", "BRP.ratio", "est.adj", "lo.adj", " hi.adj", " BRP.ratio.adj")
+    }
+    F_fleet = F_fleet %>% bind_rows()
+    
+    termyr.ests.cis <- bind_rows(
+      F = F_fleet,
+      SSB=SSB,
+      .id = "Parameter") %>%
+      bind_rows(., filter(Rect.yr, YEAR == model.lyr) %>% mutate(Parameter = "Rect")) %>%
+      select(Parameter, est, CV, lo_90, hi_90, BRP.ratio, est.adj, lo.adj, hi.adj, BRP.ratio.adj) 
+    termyr.ests.cis$Parameter[1:model$input$data$n_fleets] = "F"
+    termyr.ests.cis$Parameter[model$input$data$n_fleets+1] = "SSB"
+    
+    
+  } else{ # If only one fleet
+    for (i in 1:ncol(F)) {
+      F[,i] = as.numeric(F[,i])
+      SSB[,i] = as.numeric(SSB[,i])            # Negating Single-WHAM issues of class
+    }
+    
+    termyr.ests.cis <- bind_rows(
+      F=F,
+      SSB=SSB,
+      .id = "Parameter") %>%
+      bind_rows(., filter(Rect.yr, YEAR == model.lyr) %>% mutate(Parameter = "Rect")) %>%
+      select(Parameter, est, CV, lo_90, hi_90, BRP.ratio, est.adj, lo.adj, hi.adj, BRP.ratio.adj) 
+    termyr.ests.cis$Parameter[1] = "F"
+    termyr.ests.cis$Parameter[2] = "SSB"
+  }
   
   return_list$termyr.ests.cis <- termyr.ests.cis
   
   # Return
   return(return_list)
 }
+
 
 
 
