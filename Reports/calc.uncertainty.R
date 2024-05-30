@@ -21,7 +21,7 @@ calc.uncertainty <- function(log.est = NULL,
             hi_95 = exp(log.est + qnorm(0.975)*log.se),
             lo_90 = exp(log.est - qnorm(0.95)*log.se), # 90% CI, needed for Mohn's rho adjustment
             hi_90 = exp(log.est + qnorm(0.95)*log.se)) %>%
-    select(est, se, CV, lo, hi)
+    select(est, se, CV, lo_90, hi_90, lo_95, hi_95)
   
   return(result)
 }
