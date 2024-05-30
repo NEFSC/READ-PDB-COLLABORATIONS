@@ -16,7 +16,7 @@
 #'   \item{SSB.yr_adj - SSB.yr table with Mohn's rho adjustments}
 #'   \item{Rect.yr - A table containing a time series of Recruitment and CVs}
 #'   \item{Rect.yr_adj - Rect.yr table with Mohn's rho adjustments}
-#'   \item{termyr.ests.cis - A table of terminal year estimates of F, SSB, and Recruitment with 95% CIs}
+#'   \item{termyr.ests.cis - A table of terminal year estimates of F, SSB, and Recruitment with 95% and 90% CIs}
 #' }
 
 
@@ -120,7 +120,7 @@ pullResults_WHAM <- function(model = NULL,
     SSB = filter(SSB.yr, YEAR == model.lyr) %>% rename(BRP.ratio = relSSB, BRP.ratio.adj = relSSB.adj),
     .id = "Parameter") %>%
     bind_rows(., filter(Rect.yr, YEAR == model.lyr) %>% mutate(Parameter = "Rect")) %>%
-    select(Parameter, est, CV, lo, hi, BRP.ratio, est.adj, lo.adj, hi.adj, BRP.ratio.adj) 
+    select(Parameter, est, CV, lo_95, hi_95, lo_90, hi_90, BRP.ratio, est.adj, lo.adj, hi.adj, BRP.ratio.adj) 
   
   return_list$termyr.ests.cis <- termyr.ests.cis
   

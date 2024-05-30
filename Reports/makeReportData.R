@@ -8,10 +8,6 @@
 #' @param index_names A vector of index names that match the order they are listed in the model_MT, default = "index1", "index2"..."index_n". Also used in automatically labeling indices in report unless column names overwritten
 #' @param outdir A file path specifying the directory where MT report data should be saved
 #' 
-#' want this to be a vector of booleans for the 1) current and 2) prior MT model
-#' want to build out an option so if the prior model isn't WHAM you can provide a list of values in the same format
-#' write a pull wham results function that can be run across current and prior assessment if wham
-#' 
 #' @return A list containing the following:
 #' \itemize{
 #'   \item{comb.model.summary - A table containing SSB, F, and Recruitment estimates with CVs for the current MT and prior assessments}
@@ -29,7 +25,9 @@
 library(tidyverse)
 library(wham)
 library(DataExplorer)
-source(here::here("R/pullResults_WHAM.R"))
+# source(here::here("Reports/pullResults_WHAM.R"))
+# source(here::here("Reports/calc.rho.adj.ests.R"))
+# source(here::here("Reports/calc.uncertainty.R"))
 
 makeReportData <- function(model_MT = NULL,
                          model_MTproj = NULL,
@@ -52,8 +50,8 @@ return_list$MT_MohnsRho <- MT_results$Mohns_rho
 return_list$MT_termyr <- MT_results$termyr.ests.cis
 
 # Check if retro is significant (TRUE if rho-adjusted F or SSB in terminal year falls outside 95% CI for model estimate)
-check_SSBadj <- MT_results$SSB.yr_adj %>% group_by(YEAR) %>% mutate(doAdj_SSB = (est.adj <= hi & est.adj >= lo) == FALSE) %>% tail(n=1) %>% select(doAdj_SSB)
-check_Fadj <- MT_results$F.yr_adj %>% group_by(YEAR) %>% mutate(doAdj_F = (est.adj <= hi & est.adj >= lo) == FALSE) %>% tail(n=1) %>% select(doAdj_F)
+check_SSBadj <- MT_results$SSB.yr_adj %>% group_by(YEAR) %>% mutate(doAdj_SSB = (est.adj <= hi_90 & est.adj >= lo_90) == FALSE) %>% tail(n=1) %>% select(doAdj_SSB)
+check_Fadj <- MT_results$F.yr_adj %>% group_by(YEAR) %>% mutate(doAdj_F = (est.adj <= hi_90 & est.adj >= lo_90) == FALSE) %>% tail(n=1) %>% select(doAdj_F)
 return_list$MT_retro.signif <- TRUE %in% full_join(check_SSBadj, check_Fadj) # Returns FALSE if no SSB or F adjustment needed and TRUE if either require an adjustment
 
 # # Check stock status !!! Check this, I think that SSB_status should be 0.5*SSBproxy, may want to build in the option here to provide the target/threshold/ect. to use in determining stock status & feed into MT report
@@ -152,7 +150,7 @@ return_list$proj_yrs = proj.yrs
 # Catch: observed & projected years !!! has issues, "log_catch_proj doesn't exist in multi-wham sdrep
 if(multiWHAM[2] == TRUE){
   catch_proj <- model_MTproj$rep$pred_catch %>% as.data.frame() %>% 
-    mutate(YEAR = model_MTproj$input$years_full, est = V1, lo = NA, hi = NA) %>% # Placeholders for lo/hi CI since catch not reported with se in multi-wham
+    mutate(YEAR = model_MTproj$input$years_full, est = V1, lo_95 = NA, hi_95 = NA) %>% # Placeholders for lo/hi 95% CI since catch not reported with se in multi-wham
     drop_columns("V1") %>%
     filter(YEAR %in% proj.yrs) 
   catch_obs <- model_MTproj$input$data$agg_catch %>% as.data.frame() %>% mutate(YEAR = model_MTproj$input$years, est = V1) %>% drop_columns("V1") 
@@ -180,13 +178,11 @@ return_list$proj_ssb <- ssb_allyrs %>% filter(YEAR %in% proj.yrs) %>% round(., 0
 
 # Generate SSB projection text
 return_list$text_ssb.proj <-  apply(return_list$proj_ssb, 1, function(x) {
-  paste(x['est'], " (", x['lo'], " - ", x['hi'], ")", sep="")
+  paste(x['est'], " (", x['lo_95'], " - ", x['hi_95'], ")", sep="")
 })
 
 
 # Max F: model & projected years
-model_MTproj = bridge12_proj
-
 FAA.allyrs <- sdrep[grep("log_FAA_tot", rownames(sdrep), fixed = TRUE),]
 FAA.allyrs <- calc.uncertainty(log.est=FAA.allyrs$Estimate, log.se=FAA.allyrs$`Std. Error`) %>% drop_columns("CV") %>% # Calculate CIs for FAA estimates
     mutate(AGE = rep(1:model_MTproj$input$data$n_ages, each=length(model_MTproj$years_full)),YEAR = rep(c(model_MTproj$years_full), model_MTproj$input$data$n_ages))
@@ -230,8 +226,8 @@ if("wham_version" %in% rownames(summary(model_prior)) == TRUE){ # If prior asses
 }
 
 # Check if retro is significant (TRUE if rho-adjusted F or SSB in terminal year falls outside 95% CI for model estimate)
-check_SSBadj <- prior_results$SSB.yr_adj %>% group_by(YEAR) %>% mutate(doAdj_SSB = (est.adj <= hi & est.adj >= lo) == FALSE) %>% tail(n=1) %>% select(doAdj_SSB)
-check_Fadj <- prior_results$F.yr_adj %>% group_by(YEAR) %>% mutate(doAdj_F = (est.adj <= hi & est.adj >= lo) == FALSE) %>% tail(n=1) %>% select(doAdj_F)
+check_SSBadj <- prior_results$SSB.yr_adj %>% group_by(YEAR) %>% mutate(doAdj_SSB = (est.adj <= hi_90 & est.adj >= lo_90) == FALSE) %>% tail(n=1) %>% select(doAdj_SSB)
+check_Fadj <- prior_results$F.yr_adj %>% group_by(YEAR) %>% mutate(doAdj_F = (est.adj <= hi_90 & est.adj >= lo_90) == FALSE) %>% tail(n=1) %>% select(doAdj_F)
 return_list$prior_retro.signif <- TRUE %in% full_join(check_SSBadj, check_Fadj) # Returns FALSE if no SSB or F adjustment needed and TRUE if either require an adjustment
 
 
