@@ -80,12 +80,12 @@ pullResults_WHAM <- function(model = NULL,
   if(multiWHAM == TRUE){
     F.yr <- calc.uncertainty(log.est = model_est$log_F_tot, log.se = model_sd$log_F_tot) %>% mutate(YEAR = model$years, .before = "est") %>%
       mutate(relF = est/model_Fproxy["est"]) %>%
-      calc.rho.adj.ests(., rho = Mohns_rho$F) %>%
+      calc.rho.adj.ests(., rho = Mohns_rho$F) %>% # !!! May need to check if should be Fbar or ["Fbar"]
       mutate(relF.adj = est.adj/model_Fproxy["est"])
   } else{
     F.yr <- calc.uncertainty(log.est = model_est$log_F, log.se = model_sd$log_F) %>% mutate(YEAR = model$years, .before = "est") %>%
       mutate(relF = est/model_Fproxy["est"]) %>%
-      calc.rho.adj.ests(., rho = Mohns_rho$F) %>%
+      calc.rho.adj.ests(., rho = Mohns_rho["Fbar"]) %>%
       mutate(relF.adj = est.adj/model_Fproxy["est"])
   }
   
