@@ -150,6 +150,7 @@ makeReportData <- function(model_MT = NULL,
   } else { # If single-wham version installed after April 30, 2024 use same summary method as multi-wham
     sdrep <- summary(model_MTproj$sdrep) %>% as.data.frame()
   } 
+
   proj.yrs = model_MTproj$input$years_full[which(! model_MTproj$input$years_full %in% model_MTproj$input$years)]
   return_list$proj_yrs = proj.yrs
   
