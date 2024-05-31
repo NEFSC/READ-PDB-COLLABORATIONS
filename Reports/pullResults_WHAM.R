@@ -145,7 +145,7 @@ pullResults_WHAM <- function(model = NULL,
       SSB=SSB,
       .id = "Parameter") %>%
       bind_rows(., filter(Rect.yr, YEAR == model.lyr) %>% mutate(Parameter = "Rect")) %>%
-      select(Parameter, est, CV, lo_90, hi_90, BRP.ratio, est.adj, lo.adj, hi.adj, BRP.ratio.adj) 
+      select(Parameter, est, CV, lo_90, hi_90, lo_95, hi_95, BRP.ratio, est.adj, lo.adj, hi.adj, BRP.ratio.adj) 
     termyr.ests.cis$Parameter[1:model$input$data$n_fleets] = "F"
     termyr.ests.cis$Parameter[model$input$data$n_fleets+1] = "SSB"
     
@@ -161,7 +161,7 @@ pullResults_WHAM <- function(model = NULL,
       SSB=SSB,
       .id = "Parameter") %>%
       bind_rows(., filter(Rect.yr, YEAR == model.lyr) %>% mutate(Parameter = "Rect")) %>%
-      select(Parameter, est, CV, lo_90, hi_90, BRP.ratio, est.adj, lo.adj, hi.adj, BRP.ratio.adj) 
+      select(Parameter, est, CV, lo_90, hi_90, lo_95, hi_95, BRP.ratio, est.adj, lo.adj, hi.adj, BRP.ratio.adj) 
     termyr.ests.cis$Parameter[1] = "F"
     termyr.ests.cis$Parameter[2] = "SSB"
   }
