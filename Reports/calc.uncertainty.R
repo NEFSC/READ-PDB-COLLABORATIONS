@@ -1,6 +1,9 @@
 #' @param log.est An estimated time series in log space, no default.
 #' @param log.se A vector of log standard errors corresponding to the estimated time series, no default. 
 #' 
+#' @param log.est An estimated time series in log space, no default.
+#' @param log.se A vector of log standard errors corresponding to the estimated time series, no default. 
+#' 
 #' @return A data frame containing:
 #' \itemize{
 #'   \item{est - Time series of estimated values}
@@ -21,7 +24,7 @@ calc.uncertainty <- function(log.est = NULL,
             hi_95 = exp(log.est + qnorm(0.975)*log.se),
             lo_90 = exp(log.est - qnorm(0.95)*log.se), # 90% CI, needed for Mohn's rho adjustment
             hi_90 = exp(log.est + qnorm(0.95)*log.se)) %>%
-    select(est, se, CV, lo, hi)
+    select(est, se, CV, lo_90, hi_90, lo_95, hi_95)
   
   return(result)
 }
