@@ -197,12 +197,14 @@ makeReportData <- function(model_MT = NULL,
   FAA.allyrs <- calc.uncertainty(log.est=FAA.allyrs$Estimate, log.se=FAA.allyrs$`Std. Error`) %>% drop_columns("CV") %>% # Calculate CIs for FAA estimates
     mutate(AGE = rep(1:model_MTproj$input$data$n_ages, each=length(model_MTproj$years_full)),YEAR = rep(c(model_MTproj$years_full), model_MTproj$input$data$n_ages))
   
-  return_list$proj_F <- FAA.allyrs %>% filter(YEAR %in% proj.yrs) %>% drop_columns(c("se", "YEAR")) %>% round(.,3) #!!! Fmax.allyrs just appears to have CIs so no different from the above
+  return_list$proj_F <- FAA.allyrs %>% 
+    filter(AGE == model_MTproj$input$data$n_ages) %>% # Select projected F for maximum age
+    filter(YEAR %in% proj.yrs) %>% 
+    drop_columns(c("se", "YEAR", "AGE")) %>% 
+    round(.,3) 
+  
   # #Check confirms that sdrep lists by age and year
   # calc.uncertainty(log.est=FAA.allyrs$Estimate, log.se=FAA.allyrs$`Std. Error`) %>% drop_columns("CV") %>% mutate(AGE = rep(1:model_MTproj$input$data$n_ages, each=length(model_MTproj$years_full))) %>% filter(AGE==2) %>% select(est) %>% cbind(model_MTproj$rep$FAA[1,,2])
-  
-  #!!! ??? proj_F has FAA, but maybe this should be total F?
-  
   
   # NAA: model & projected years
   # NAA for year 2-end
@@ -281,8 +283,7 @@ makeReportData <- function(model_MT = NULL,
   # Save and return #####
   saveRDS(return_list, file = paste0(outdir, "/reportData.RDS")) # Save reportData as .RDS file
   write.csv(return_list$model_results, file = paste0(outdir, "/model_results.csv")) # Write SSB/F/R to .CSV
-  write.csv(return_list$indices, file = paste0(outdir, "/model_indices.csv")) # Write index time series to .CSV
-  
+  write.csv(return_list$indices, file = paste0(outdir, "/survey_results.csv")) # Write index time series to .CSV
   
   return(return_list)
 }
