@@ -6,12 +6,12 @@
 #' \itemize{
 #'   \item{BRP - Name of the BRP}
 #'   \item{est - BRP estimates}
-#'   \item{lo - Lower 95% confidence bound}
-#'   \item{hi - Upper 95% confidence bound}
+#'   \item{lo_95 - Lower 95% confidence bound}
+#'   \item{hi_95 - Upper 95% confidence bound}
 #'   \item{source - Model source, either "prior" for prior assessment or "MT" for current assessment}
 #' }
 #' 
-#' @return A string for the BRP text.
+#' @return A string for the BRP text including 95% CI.
 
 create.brp.text <- function(brp.name = NULL, 
                             round.digits = 3, 
@@ -19,16 +19,16 @@ create.brp.text <- function(brp.name = NULL,
   # Pull ref pt from model_prior
   old.brp <- brp.table %>% filter(source == "prior", BRP == brp.name) %>% select(est) %>% round(., round.digits) %>% unlist()
   
-  if(!brp.name == 'Fproxy'){ # Text for SSB and MSY proxies
-    brp.ests <- brp.table %>% filter(source == "MT", BRP == brp.name) 
+  # if(!brp.name == 'Fproxy'){ # Text for SSB and MSY proxies
+    brp.ests <- brp.table %>% filter(source == "MT", BRP == brp.name) # Same formatting for all reference point text
     new.brp <- round(brp.ests$est, round.digits)
-    lo.brp <- round(brp.ests$lo, round.digits)
-    hi.brp <- round(brp.ests$hi, round.digits)
+    lo.brp <- round(brp.ests$lo_95, round.digits)
+    hi.brp <- round(brp.ests$hi_95, round.digits)
     output.text <- c(old.brp, paste(new.brp, " (", lo.brp," - ", hi.brp,")", sep=""))
-  } else {
-    new.brp <- brp.table %>% filter(source == "MT", BRP == brp.name) %>% select(est) %>% round(., round.digits)
-    output.text <- as.character(c(old.brp, new.brp))
-  }
+  # } else {
+  #   new.brp <- brp.table %>% filter(source == "MT", BRP == brp.name) %>% select(est) %>% round(., round.digits)
+  #   output.text <- as.character(c(old.brp, new.brp))
+  # }
   
   # Return
   return(output.text)
