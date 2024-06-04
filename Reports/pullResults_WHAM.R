@@ -35,19 +35,23 @@ pullResults_WHAM <- function(model = NULL,
   model_sd <- as.list(model$sdrep, what = "Std", report = TRUE)
   
   # Reference points
-  model_Fproxy <- model_est$log_FXSPR_static %>% exp() %>% c(est = ., lo = NA, hi = NA) 
+    # model_Fproxy <- model_est$log_FXSPR_static %>% exp() %>% c(est = ., lo_95 = NA, hi_95 = NA) 
+  model_Fproxy <- data.frame(logFproxy = model_est$log_FXSPR_static, logFproxy_sd = model_sd$log_FXSPR_static) %>% # Return 95% CI for Fproxy as well
+    mutate(est = exp(logFproxy),
+           lo_95 = exp(logFproxy - qnorm(0.975)*logFproxy_sd),
+           hi_95 = exp(logFproxy + qnorm(0.975)*logFproxy_sd)) %>% distinct()
   
   model_SSBproxy <- data.frame(logSSBproxy = model_est$log_SSB_FXSPR_static, logSSBproxy_sd = model_sd$log_SSB_FXSPR_static) %>%
     mutate(est = exp(logSSBproxy),
-           lo = exp(logSSBproxy - qnorm(0.975)*logSSBproxy_sd),
-           hi = exp(logSSBproxy + qnorm(0.975)*logSSBproxy_sd)) %>% distinct() # Remove duplicates introduced by lines 31-32
+           lo_95 = exp(logSSBproxy - qnorm(0.975)*logSSBproxy_sd),
+           hi_95 = exp(logSSBproxy + qnorm(0.975)*logSSBproxy_sd)) %>% distinct() # Remove duplicates introduced by lines 31-32
   
   model_MSYproxy <- data.frame(logMSYproxy = model_est$log_Y_FXSPR_static, logMSYproxy_sd = model_sd$log_Y_FXSPR_static) %>%
     mutate(est = exp(logMSYproxy),
-           lo = exp(logMSYproxy - qnorm(0.975)*logMSYproxy_sd),
-           hi = exp(logMSYproxy + qnorm(0.975)*logMSYproxy_sd)) %>% distinct() # Remove duplicates introduced by lines 31-32
+           lo_95 = exp(logMSYproxy - qnorm(0.975)*logMSYproxy_sd),
+           hi_95 = exp(logMSYproxy + qnorm(0.975)*logMSYproxy_sd)) %>% distinct() # Remove duplicates introduced by lines 31-32
   
-  brps <- bind_rows('Fproxy' = model_Fproxy, 'SSBproxy' = model_SSBproxy, 'MSYproxy' = model_MSYproxy, .id="BRP") %>% select(BRP, est, lo, hi)
+  brps <- bind_rows('Fproxy' = model_Fproxy, 'SSBproxy' = model_SSBproxy, 'MSYproxy' = model_MSYproxy, .id="BRP") %>% select(BRP, est, lo_95, hi_95)
   
   return_list$brps <- brps
   
@@ -136,7 +140,7 @@ pullResults_WHAM <- function(model = NULL,
     F_fleet <- NULL
     for(ifleet in 1:model$input$data$n_fleets){
       F_fleet[[ifleet]] <-  F[grep(paste0(".", ifleet), colnames(F))]
-      colnames(F_fleet[[ifleet]]) <- c("est", "CV", "lo_90", "hi_90", "lo_95", "hi_95", "BRP.ratio", "est.adj", "lo.adj", " hi.adj", " BRP.ratio.adj")
+      colnames(F_fleet[[ifleet]]) <- c("est", "CV", "lo_90", "hi_90", "lo_95", "hi_95", "BRP.ratio", "est.adj", "lo_90.adj", " hi_90.adj", " BRP.ratio.adj")
     }
     F_fleet = F_fleet %>% bind_rows()
     
@@ -145,7 +149,7 @@ pullResults_WHAM <- function(model = NULL,
       SSB=SSB,
       .id = "Parameter") %>%
       bind_rows(., filter(Rect.yr, YEAR == model.lyr) %>% mutate(Parameter = "Rect")) %>%
-      select(Parameter, est, CV, lo_90, hi_90, lo_95, hi_95, BRP.ratio, est.adj, lo.adj, hi.adj, BRP.ratio.adj) 
+      select(Parameter, est, CV, lo_90, hi_90, lo_95, hi_95, BRP.ratio, est.adj, lo_90.adj, hi_90.adj, BRP.ratio.adj) 
     termyr.ests.cis$Parameter[1:model$input$data$n_fleets] = "F"
     termyr.ests.cis$Parameter[model$input$data$n_fleets+1] = "SSB"
     
@@ -161,7 +165,7 @@ pullResults_WHAM <- function(model = NULL,
       SSB=SSB,
       .id = "Parameter") %>%
       bind_rows(., filter(Rect.yr, YEAR == model.lyr) %>% mutate(Parameter = "Rect")) %>%
-      select(Parameter, est, CV, lo_90, hi_90, lo_95, hi_95, BRP.ratio, est.adj, lo.adj, hi.adj, BRP.ratio.adj) 
+      select(Parameter, est, CV, lo_90, hi_90, lo_95, hi_95, BRP.ratio, est.adj, lo_90.adj, hi_90.adj, BRP.ratio.adj) 
     termyr.ests.cis$Parameter[1] = "F"
     termyr.ests.cis$Parameter[2] = "SSB"
   }
