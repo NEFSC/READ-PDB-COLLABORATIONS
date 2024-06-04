@@ -13,8 +13,8 @@ calc.rho.adj.ests <- function(series = NULL,
                               rho = NULL)  {
   result <- series %>% as.data.frame() %>%
     mutate( est.adj = (1/(1+rho))*est,
-            lo.adj  = (1/(1+rho))*lo_90,
-            hi.adj  = (1/(1+rho))*hi_90
+            lo_90.adj  = (1/(1+rho))*lo_90,
+            hi_90.adj  = (1/(1+rho))*hi_90
     )
   
   return(result)
