@@ -9,27 +9,27 @@
 #' @param fleet_names A vector of fleet names in the order their data is provided to wham (also determines plot order), no default.
 #' @param index_names A vector of index names in the order their data is provided to wham (also determines plot order), no default.
 
-# multi-wham test
-bridge12 <- readRDS(file = here::here("Bridge_runs", "12_bridge_updateWHAM", "12_bridge_model.rds"))
-makeMTslides(wham_model = bridge12,
-             outdir = here::here("Bridge_runs", "12_bridge_updateWHAM"),
-             slideName = "test_MTslides",
-             stock_name = "Georges Bank Atlantic Cod",
-             format = "pptx", 
-             fleet_names = "Combined US & Canadian",
-             index_names = c("DFO spring", "NEFSC spring", "NEFSC fall")
-             )
-
-# single-wham test
-bridge14 <- readRDS(file = here::here("Bridge_runs", "14_bridge_MT", "14_bridge_model.rds"))
-makeMTslides(wham_model = bridge14,
-             outdir = here::here("Bridge_runs", "14_bridge_MT"),
-             slideName = "test_MTslides",
-             stock_name = "Georges Bank Atlantic Cod",
-             format = "pptx", 
-             fleet_names = "Combined US & Canadian",
-             index_names = c("DFO spring", "NEFSC spring", "NEFSC fall")
-)
+# # multi-wham test
+# bridge12 <- readRDS(file = here::here("Bridge_runs", "12_bridge_updateWHAM", "12_bridge_model.rds"))
+# makeMTslides(wham_model = bridge12,
+#              outdir = here::here("Bridge_runs", "12_bridge_updateWHAM"),
+#              slideName = "test_MTslides",
+#              stock_name = "Georges Bank Atlantic Cod",
+#              format = "pptx", 
+#              fleet_names = "Combined US & Canadian",
+#              index_names = c("DFO spring", "NEFSC spring", "NEFSC fall")
+#              )
+# 
+# # single-wham test
+# bridge14 <- readRDS(file = here::here("Bridge_runs", "14_bridge_MT", "14_bridge_model.rds"))
+# makeMTslides(wham_model = bridge14,
+#              outdir = here::here("Bridge_runs", "14_bridge_MT"),
+#              slideName = "test_MTslides",
+#              stock_name = "Georges Bank Atlantic Cod",
+#              format = "pptx", 
+#              fleet_names = "Combined US & Canadian",
+#              index_names = c("DFO spring", "NEFSC spring", "NEFSC fall")
+# )
 
 makeMTslides <- function(wham_model = NULL,
                          outdir = NULL,
@@ -52,8 +52,8 @@ makeMTslides <- function(wham_model = NULL,
   plotPath = paste0(outdir, "/MTslides/plots_png")
   
   # Indexing
-  n_fleet = length(fleet_names)
-  n_index = length(index_names)
+  n_fleet = wham_model$input$data$n_fleets
+  n_index = wham_model$input$data$n_indices
   
   if("n_regions" %in% names(wham_model$input$data)){ # If wham_model has n_regions input data then it is a multi-wham model object
     n_region = wham_model$input$data$n_regions
@@ -162,7 +162,7 @@ makeMTslides <- function(wham_model = NULL,
   
   # TOR 3 slides
   write("## TOR 3: ", slideOut, append = TRUE)
-  write("Estimate annual fishing mortality, recruitment and stock biomass for the time series using the approved assessment method and estimate their uncertainty. Include retrospective analyses if possible (both historical and within-model) to allow a comparison with previous assessment results and projections, and to examine model fit. \n Include bridge runs from the previously accepted model to the updated model proposed for this peer review.")
+  write("Estimate annual fishing mortality, recruitment and stock biomass for the time series using the approved assessment method and estimate their uncertainty. Include retrospective analyses if possible (both historical and within-model) to allow a comparison with previous assessment results and projections, and to examine model fit. \n Include bridge runs from the previously accepted model to the updated model proposed for this peer review.", slideOut, append = TRUE)
   write("", slideOut, append = TRUE)
   
   # Bridge runs
@@ -172,7 +172,7 @@ makeMTslides <- function(wham_model = NULL,
   for(iregion in 1:n_region){ # If multi_wham == FALSE n_region = 1 so only does this loop once
     for(ifleet in 1:n_fleet){
       # Format slide
-      write(paste0("## Aggregate fit to ", fleet_names[ifleet]), slideOut, append = TRUE) # write title
+      write(paste0("## Aggregate fit to ", fleet_names[ifleet], " fleet"), slideOut, append = TRUE) # write title
       write(":::: {.columns}", slideOut, append = TRUE) # Initialize columns
       
       # Time series column
@@ -201,7 +201,7 @@ makeMTslides <- function(wham_model = NULL,
   for(iregion in 1:n_region){ # If multi_wham == FALSE n_region = 1 so only does this loop once
     for(ifleet in 1:n_fleet){
       # Format slide
-      write(paste0("## Aggregate fit to ", fleet_names[ifleet]), slideOut, append = TRUE) # write title
+      write(paste0("## Aggregate fit to ", fleet_names[ifleet], " fleet"), slideOut, append = TRUE) # write title
       write(":::: {.columns}", slideOut, append = TRUE) # Initialize columns
       
       # OSA bubble plot
@@ -284,7 +284,12 @@ makeMTslides <- function(wham_model = NULL,
   
   # Retrospective plots: NAA, R, SSB
   for(iregion in 1:n_region){
-    for(rho in c("NAA_age_1", "NAA", "SSB")){
+    if(multi_wham == TRUE){
+      rhoNames <- c("NAA_age_1", "NAA", "SSB")
+    } else{
+      rhoNames <- c("NAA_age1", "NAA", "SSB")
+    }
+    for(rho in rhoNames){
       write(paste0("## Mohn's rho: ", rho), slideOut, append = TRUE) # write title
       write(":::: {.columns}", slideOut, append = TRUE) # Initialize columns
       # Relative Mohn's rho column column
@@ -315,6 +320,7 @@ makeMTslides <- function(wham_model = NULL,
   # Fishing mortality estimates
   write("## Fishing mortality by fleet", slideOut, append = TRUE) # write title
   write(paste0("![](", paste(plotPath,"results", "F_byfleet.png", sep="/"),")"), slideOut, append = TRUE) 
+  write("", slideOut, append = TRUE) 
   
   # SSB & F plot
   write("## SSB & F estimates", slideOut, append = TRUE) # write title
@@ -331,7 +337,7 @@ makeMTslides <- function(wham_model = NULL,
   
   # TOR 4 slides
   write("## TOR 4: Biological Reference Points", slideOut, append = TRUE)
-  write("Re-estimate or update the BRPs as defined by the management track level and recommend stock status. Provide qualitative descriptions of stock status based on simple indicators/metrics.")
+  write("Re-estimate or update the BRPs as defined by the management track level and recommend stock status. Provide qualitative descriptions of stock status based on simple indicators/metrics.", slideOut, append = TRUE)
   write("", slideOut, append = TRUE)
   
   write("## TOR 4: Biological Reference Points", slideOut, append = TRUE)
@@ -351,7 +357,7 @@ makeMTslides <- function(wham_model = NULL,
   
   # TOR 6 slides
   write("## TOR 6: Research ", slideOut, append = TRUE)
-  write("Respond to any review panel comments or SSC concerns from the most recent prior assessment")
+  write("Respond to any review panel comments or SSC concerns from the most recent prior assessment", slideOut, append = TRUE)
   write("", slideOut, append = TRUE)
   
   
