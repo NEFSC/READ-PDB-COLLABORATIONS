@@ -7,7 +7,7 @@
 #' @ return data.frame of annual true and estimated F, R, and SSB
 do_selftest <- function(mod, n_sim) {
 
-  sim_inputs <- replicate(n_sim, sim_fn(mod), simplify=F)
+  sim_inputs <- replicate(n_sim, sim_fn(mod), simplify=FALSE)
   res = list(reps = list(), par.est = list(), par.se = list(), 
              adrep.est = list(), adrep.se =list())
   j <- 1
@@ -15,8 +15,8 @@ do_selftest <- function(mod, n_sim) {
     cat(paste0("sim ", i, " of ", n_sim, "\n"))
     sim_inputs[[i]]$SIM_ID <- i
     tfit <- NULL
-    tryCatch(expr = {tfit <- fit_wham(sim_inputs[[i]], do.osa = F,
-                                      do.retro = F, MakeADFun.silent = T, do.sdrep = F);},
+    tryCatch(expr = {tfit <- fit_wham(sim_inputs[[i]], do.osa = FALSE,
+                                      do.retro = FALSE, MakeADFun.silent = TRUE, do.sdrep = FALSE);},
              error = function(e){
                message("An error occurred:\n", e)
              },
