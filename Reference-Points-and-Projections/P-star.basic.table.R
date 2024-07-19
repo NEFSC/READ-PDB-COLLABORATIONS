@@ -80,7 +80,6 @@ pstartable <- function(mod=NULL,SSBmsy=NULL,catch.year1=NULL,projyr=3,CV=1.5,avg
   colnames(pstartable)[3] <- "ABC"
   
   # B/BMSY
-  bratio <- c(ratio.year2,ratio.year3)
   ratio.proj[-projyr]
   
   # Conduct one last projection to get F and SSB resultant from final ABC
