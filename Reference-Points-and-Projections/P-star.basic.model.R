@@ -45,12 +45,15 @@ pstarmodel <- function(mod=NULL,SSBmsy=NULL,catch.year1=NULL,projyr=3,CV=1.5,avg
       proj_F_opt <- c(rep(5,i),rep(3,projyr-i))
       mod.proj <- project_wham(mod, proj.opts = list(n.yrs = projyr,proj_F_opt = proj_F_opt, proj_Fcatch = catch.proj), check.version = F)
       
+      # Get OFL, SSB, and SSB ratio (relative to SSBMSY)
       ofl <- tail(apply(mod.proj$rep$pred_catch,1,sum),projyr)[i+1]
       ssb <- tail(apply(mod.proj$rep$SSB,1,sum),projyr)[i]
       ssbratio <- ssb/SSBmsy
       
+      # Calculate catch from p* code
       catch <- ABC(ofl,ssbratio,CV)
       
+      # As long as its not the terminal year, add the abc catch to catch vector and repeat
       if(i<projyr)
       {
         catch.proj[i+1] <- catch
@@ -63,6 +66,7 @@ pstarmodel <- function(mod=NULL,SSBmsy=NULL,catch.year1=NULL,projyr=3,CV=1.5,avg
   proj_F_opt <- c(rep(5,projyr))
   mod.proj <- project_wham(mod, proj.opts = list(n.yrs = projyr,proj_F_opt = proj_F_opt, proj_Fcatch = catch.proj), check.version = F)
 
+  # Return the final projection model
   return(mod.proj)
 
 }
