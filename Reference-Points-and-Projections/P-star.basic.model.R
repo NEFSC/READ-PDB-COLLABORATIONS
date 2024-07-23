@@ -1,7 +1,9 @@
 #' @title Conduct the P* projections for the MAFMC
 #' 
 #' @description Conducts the P* projections, which incorporates uncertainty and risk in ABC calculation from OFL using a fitted WHAM model 
-#'
+#' @source from C Adams for butterfish 7-5-2022
+#' @expanded by E Liljestrand 7-19-2024
+#' 
 #' @param mod An rds from a WHAM fit
 #' @param SSBmsy the SSBmsy proxy used to calculate ratio between biomass and reference point
 #' @param catch.year1 the amount of catch in the assessment year (usually the ABC)

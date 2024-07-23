@@ -3,7 +3,6 @@
 #' @description Calculates ABC using inputs of the OFL, biomass relative to target and assumed CV for OFL 
 #' @source from M. Wilberg, originally 7-26-2011, updated with new MAFMC P* policy 5-10-2022
 #' 
-#' 
 #' @param OFL OFL for the stock
 #' @param relB B/Bmsy
 #' @param CV Coefficient of variation for OFL
