@@ -1,0 +1,123 @@
+---
+title: "Catch and SSB cannot be directly compared."
+author: "Chris Legault (others welcome)"
+date: "2024-06-26"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+```
+
+## BLUF
+
+Is catch greater than spawning stock biomass in a given year for an assessment or projection a diagnostic that the model is not working? **No.**
+
+## Background
+
+During the June 2024 management track peer review, both sets of reviewers noticed situations where catch was greater than spawning stock biomass (SSB) in a year. This was raised as a concern in both cases. This document explores reasons for why this can happen and why it is not a good diagnostic for model problems. This is sometimes referred to as "the fishery caught more than the adult biomass." This is an incorrect interpretation of these two related, but not directly comparable, values.
+
+There are a number of reasons that can lead to catch being greater than SSB. These are addressed separately below, but multiple factors can occur for a given stock assessment. The reasons for a given situation will vary depending on the situation. However, in no case is catch being greater than SSB a reason to reject an assessment or projection, assuming the basic equations of fish population dynamics are done correctly.
+
+## Weights at age
+
+The weights at age for catch and SSB can differ. If the weights at age for catch are greater than for SSB, then it is clear that catch can be greater than SSB due to this factor alone.
+
+## Age of maturity versus selectivity
+
+If fish are caught in significant quantities before they become mature, catch can be greater than SSB.
+
+## Numbers of fish
+
+The Baranov catch equation used in most stock assessment models, including WHAM and ASAP, assumes that catch is removed continuously throughout the year at a given rate. This leads to a cohort following an exponential decline within the year according to the total mortality rate. Spawning stock biomass is calculated at a single point during the year, defined by the term frac_spawn. When total mortality (Z) is high, and fishing mortality (F) is a large relative to natural mortality (M, with Z=F+M), the catch from a cohort during a year can be greater than the number of fish used in the SSB calculation. Since catch = N * (1 - exp(-Z)) * (F/Z) and the numbers used for SSB are N * exp(-frac_spawn * Z), this relationship can be visualized in the graph below. Note that the age of the cohort is assumed to be fully mature in this example. If this age was not fully mature, then the SSB numbers would be reduced and the chance of catch being greater than SSB increased.
+
+```{r nfish}
+ntsteps <- 1000
+tstep <- seq(0, 1, length.out = ntsteps)
+N <- rep(1000, ntsteps)
+deadF <- rep(0, ntsteps)
+deadM <- rep(0, ntsteps)
+Fval <- 0.9
+Mval <- 0.2
+Zval <- Fval + Mval
+for (i in 2:ntsteps){
+  Zstep <- Zval * tstep[i] 
+  N[i] <- N[1] * exp(-Zstep)
+  deadF[i] <- N[1] * (1 - exp(-Zstep)) * (Fval / Zval) 
+  deadM[i] <- N[1] * (1 - exp(-Zstep)) * (Mval / Zval) 
+}
+df1 <- tibble(tstep = tstep,
+              N = N,
+              deadF = deadF,
+              deadM = deadM) |>
+  mutate(checkval = N + deadF + deadM) # should all equal 1.0
+#head(df1)
+#range(df1$checkval)
+frac_spawn <- c(1/12, 6/12, 11/12)
+SSBn <- N[1] * exp(-Zval * frac_spawn)
+df2 <- tibble(tstep = frac_spawn,
+              Status = "spawning",
+              NumberFish = SSBn)
+df1long <- df1 |>
+  select(tstep, N, deadF, deadM) |>
+  pivot_longer(cols = c(N, deadF, deadM), names_to = "Status", values_to = "NumberFish")
+ggplot(df1long, aes(x=tstep, y=NumberFish, color = as.factor(Status))) +
+  geom_line() +
+  geom_point(data=df2, aes(x=tstep, y=NumberFish)) +
+  xlab("Time within the Year (0=Jan 1, 1=Dec 31)") +
+  ylab("Number of Fish") +
+  labs(color = "Status") +
+  ggtitle(paste0("Fval = ", Fval, ", Mval = ", Mval)) +
+  theme_bw()
+```
+
+The sum of N, deadF, and deadM remains constant throughout the time period as fish can only have one of these three statuses.The three spawning times highlighted by the purple dots indicate situations where the catch at the end of the year is less than the SSB, about equal to the SSB, and greater than the SSB, reading from left to right. 
+
+This approach for a single cohort at a fully mature age can be generalized and computed for a wide range of F, M, and frac_spawn values. The two plots below show situations where the catch is greater than the SSB in red, the two are about equal in white, and catch less than SSB in blue. Note the colors depend more on F and frac_spawn than on M and that the ratio of catch to SSB can become quite large. There is nothing wrong with these calculations, it is simply math resulting in catch being larger than SSB. 
+
+```{r nfunction}
+calc_c_ssb_ratio <- function(Fval, Mval, frac_spawn){
+  N <- 1000
+  Zval <- Fval + Mval
+  catchn <- N * (1 - exp(-Zval)) * (Fval/Zval)
+  ssbn <- N * exp(-Zval * frac_spawn)
+  ratio <- catchn / ssbn
+  return(ratio)
+}
+ myvals <- expand.grid(Fval = seq(0, 2, 0.1), Mval = seq(0.1, 1, 0.1), frac_spawn = seq(0, 1, 0.1))
+ for (i in 1:length(myvals[,1])){
+   myvals$cssbratio[i] <- calc_c_ssb_ratio(myvals$Fval[i], myvals$Mval[i], myvals$frac_spawn[i])
+}
+
+ggplot(filter(myvals, Mval==0.2), aes(x=Fval, y=frac_spawn, fill = cssbratio)) +
+  geom_tile() +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 1, name = "Catch/SSB") +
+  ylab("Spawning Date (0=Jan 1, 1=Dec 31)") +
+  ggtitle("M = 0.2") +
+  theme_bw()
+
+ggplot(filter(myvals, Mval==1.0), aes(x=Fval, y=frac_spawn, fill = cssbratio)) +
+  geom_tile() +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 1, name = "Catch/SSB") +
+  ylab("Spawning Date (0=Jan 1, 1=Dec 31)") +
+  ggtitle("M = 1.0") +
+  theme_bw()
+```
+
+## Windfall
+
+A sudden increase in fishing mortality can create a windfall effect on catch. This is often seen in projections of lightly exploited stocks that suddenly increase to the desired exploitation rate. For short-lived species, this can lead to a windfall of catch that is much higher than the SSB in that year. In this situation, it may be easier to think about the SSB from the previous year compared to the catch of this year, although this comparison is still fraught with problems due to potential mismatches in weights and the cumulative aspect of catch within a year versus the point in time aspect of SSB. This was seen in the recent butterfish projections where F increased suddenly in the projections and the catch in that first year reflected a large windfall of abundance that was highly reduced at the time of spawning, resulting in catch much greater than SSB.
+
+## WHAM: Population Process Error and Observed vs Predicted
+
+A challenge associated with state-space models that have random effects on the survival of cohorts is that the resulting numbers at the next age and year can differ from the expected value based on M and F. This does not impact the calculation of catch or SSB for a given year, but the change in the population may not be as expected given the M and F due to the random effects. This is particularly true when there are strong correlations in the numbers at age random effects across age and years. For example, a block of positive random effects on survival can allow catch greater than SSB to continue for an extended period because the fish are not actually dying as fast as the predicted catch would indicate. There is also the possibility that the observed catch is quite different from the estimated catch, which can change the ratio of catch to SSB within the model but not be noticed if the observed catch is used in the comparison. This comparison remains faulty and does not indicate anything about model diagnostics.
+
+## Exploitable Biomass
+
+There are a number of ways to compute exploitable biomass, especially when there are multiple fleets that have different selectivity patterns and weights at age. This can further confuse the inferred relationship between catch and SSB.
+
