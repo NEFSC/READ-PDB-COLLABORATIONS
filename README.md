@@ -3,12 +3,27 @@
 Our goal is to build a community of practice around sharing code and tools to make our science more reproducible with this repository serving as a starting point for collaboration. 
 
 
-### How can I collaborate?
+## How can I collaborate?
 
 - Consider contributing a function or code example (code you've shared more than once over email is a good candidate), see our contribution guidelines to get started. Reach out to one of the formal repository collaborators if you don't see a sub-directory pertinent to your function or example.
 - Adapt one of the code examples for your own application.
-- Use functions contained in this repository by 1) cloning or forking a copy of the repository to your local machine and load the function by sourcing the corresponding .R file (recommended approach) or 2) download a copy of the .R file containing the function to your local machine and source.
+- Use functions contained in this repository by 1) installing the R package for this repository (easiest option, instructions below), 2) cloning or forking a copy of the repository to your local machine and load the function by sourcing the corresponding .R file (recommended approach) or 3) download a copy of the .R file containing the function to your local machine and source.
 
+## Installation
+Install the latest version of the R package version of this repository:
+```
+devtools::install_github("NEFSC/READ-PDB-COLLABORATIONS", dependencies = TRUE)
+```
+or
+```
+pak::pkg_install("NEFSC/READ-PDB-COLLABORATIONS")
+```
+
+A few notes for repository/package contributors:
+
+- Functions can be pulled from any folder in this repository so continue to organize as you see fit but **PLEASE DO NOT EDIT the following R-package files: R and man folders, DESCRIPTION, LICENSE, NAMESPACE files**
+- Only functions that 1) are contained in an R script and 2) include Roxygen documentation will be included in the package
+- New functions and edits to existing R functions in this repository will not be automatically incorporated into the R package. Updates will be made roughly monthly but ask Amanda if you want a faster turn-around
 
 ### Contribution guidelines
 #### We welcome the contribution of new functions and documented code examples that meet the following criteria:
@@ -45,14 +60,26 @@ The expectation is that contributions to this repository will still be works in 
   - Learn more about Github: [basics in 10 minutes](https://www.freecodecamp.org/news/learn-the-basics-of-git-in-under-10-minutes-da548267cc91/) or [for beginners](https://product.hubspot.com/blog/git-and-github-tutorial-for-beginners) or [more for beginners](https://www.simplilearn.com/tutorials/git-tutorial/git-tutorial-for-beginner).
 
 ### Folders
-See README files within each folder for detailed descriptions of the files they contain. The use of sub-folders is discouraged to simplify referencing file paths and stabalize the use of hyperlinks to code.
+See README files within each folder for detailed descriptions of the files they contain. The use of sub-folders is discouraged to simplify referencing file paths and stabilize the use of hyperlinks to code.
 
 | Folder | Description |
 | ------ | ----------- |
+| Assessment FAQ | Contains tools and code to help answer FAQs about stock assessments and related topics | 
+| Reference points and projections | Contains functions to conduct P* projections for the MAFMC stocks and advanced reference point analysis |
+| Reports | Contains support functions to make management track assessment reports (e.g., those on the [stock assessment portal](https://apps-nefsc.fisheries.noaa.gov/saw/sasi.php) |
 | WHAM | Contains WHAM support functions and use examples that are not yet integrated into the WHAM R package, you may also consider [submitting well-tested functions to WHAM directly.](https://github.com/timjmiller/wham/blob/80b2b727fb62e09fb880267fcc648cbdb3a16882/.github/CONTRIBUTING.md) |
 | stockEff | Contains functions to interface with stockEff (e.g., pull information from or assist in loading new stocks/settings) |
-| Reports | Contains support functions to make management track assessment reports (e.g., those on the [stock assessment portal](https://apps-nefsc.fisheries.noaa.gov/saw/sasi.php) |
-| Reference points and projections | Contains functions to conduct P* projections for the MAFMC stocks and advanced reference point analysis |
 | Beamer Presentation w/ NOAA logo | Code to create Beamer presentation (pdf) with Table of Contents indicator in the header, with fancy 'NOAA branding'. Grab it [here](https://github.com/liz-brooks/Beamer-Presentation-NOAA-logo) until I straighten out my pull/push issue. test|
+
+R package files that SHOULD NOT be edited directly:
+
+| Folder/File | Description |
+| ------ | ----------- |
+| R | Copy of functions from this repository to include in the R package, only functions that 1) are contained in an R script and 2) include Roxygen documentation will be included in the package which will be updated roughtly monthly |
+| man | Folder containing formatted R package documentation, auto-populated when building package, do not edit manually |
+| DESCRIPTION | Documentation file listing package details, may occassionally be edited manually |
+| LICENSE | Software license specifics for the Rpackage, matches that for the repository |
+| NAMESPACE | Formatted R package documentation, auto-populated when building package, do not edit manually |
+| buildRPackage.R | Script to build R package with documentation, do not run or edit unless you have spoken to Amanda |
 
 This repository is a scientific product and is not official communication of the National Oceanic and Atmospheric Administration, or the United States Department of Commerce. All NOAA GitHub project code is provided on an ‘as is’ basis and the user assumes responsibility for its use. Any claims against the Department of Commerce or Department of Commerce bureaus stemming from the use of this GitHub project will be governed by all applicable Federal law. Any reference to specific commercial products, processes, or services by service mark, trademark, manufacturer, or otherwise, does not constitute or imply their endorsement, recommendation or favoring by the Department of Commerce. The Department of Commerce seal and logo, or the seal and logo of a DOC bureau, shall not be used in any manner to imply endorsement of any commercial product or activity by DOC or the United States Government.
