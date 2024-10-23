@@ -9,7 +9,7 @@
 #' 
 #' @param tab_blocks A list providing the following information to populate the BLOCKS tab: (NOTE: LW_ID is populated by identifying the LW whose associated start and end months completely overlap with the block, otherwise an NA is returned)
 #' \itemize{
-#'   \item{nespp4 - A named vector of market categories to include in block tab, where names correspond to the nespp4 codes. No default}
+#'   \item{nespp4 - A named vector of market categories to include in block tab, where names correspond to the nespp4 codes. No default. Market categories included in the stock definition but excluded here are by default prorated (see tab_prorate for specifics)}
 #'   \item{dropMarketYr - A table containing the nespp4 market category ("NESPP4" column) to "roll up" (i.e. drop) in the corrsponding year column("YEAR"), if provided landings are redistributed to other categories for that year/region (see "roll up" in Adding and Updating Stocks in StockEff documentation)}
 #'   \item{block_opt - A string for the following options to specify blocks for each market category and year: 
 #'           if = NULL (default), one block for every L-W relationship in tab_lw, 
@@ -20,9 +20,9 @@
 #'           if = "checkLENGTHS", Assumes monthly blocks were submitted to stockEff, checks the number of monthly length samples from biosamp_summary.csv to determine smallest block supported by data for each market category and year. Must also provide minLenSample argument if this option is used.}
 #'   \item{minLenSample - A number specifying the minimum number of length sampels required to support a given block for a year and market category, only required if tab_blocks$block_opt == "checkLENGTHS"}
 #'   \item{autofillLW - A boolean, if TRUE fills LW_ID based on complete overlap with LW months and years, if FALSE leaves NAs for blocks without a perfect match to LW month and year definition, default = FALSE}
-#'   \item{mkt_missing - A string to govern years where 1+ market categories not length sampled, default = NULL:
-#'            if = "drop" then these yearse dropped and NAA is not estimated
-#'            if = NULL then return NAs for BLOCK_TYPE in these years}
+#'   \item{mkt_missing - A string to govern years where 1+ market categories not length sampled, default = "keep":
+#'            if = "drop" then these years dropped and NAA is not estimated
+#'            if = "keep" then return NAs for BLOCK_TYPE in these years}
 #'   \item{check_missing - A boolean, if TRUE check for missing market categories in data_years, also check if is.na(mkt_missing) == FALSE (i.e. if years with missing market categories will be dropped or further processed)}
 #' }
 #' @param tab_prorate A list providing the following information to populate the PRORATE tab:
@@ -40,7 +40,7 @@
 #'   \item{BETA - Beta parameter for each LW relationship}
 #'   \item{SOURCE - Description of LW parameter and link to source document}
 #'   \item{LW_TYPE - Type of LW relationship, options can include "SEMESTER", "ANNUAL", "CUSTOM"}
-#'   \item{LW_ID - ID fore each row of the table}
+#'   \item{LW_ID - ID for each row of the table}
 #'   \item{MONTH_START - First month that LW_ID row may be used, processed in tab_BLOCKS and ultimately dropped from tab_LW_PARAMS}
 #'   \item{MONTH_END - Last month that LW_ID row may be used, processed in tab_BLOCKS and ultimately dropped from tab_LW_PARAMS}
 #'   \item{YEAR_START - First year that LW_ID row may be used, processed in tab_BLOCKS and ultimately dropped from tab_LW_PARAMS}
@@ -67,6 +67,7 @@
 library(tidyverse)
 library(DataExplorer)
 library(writexl)
+library(DBI)
 
 # GB cod example - this still uses the RT LW
 # fillLW <- read_csv("Data_workflow/RT_code_fromCP/lw_coefficients_cod_final.csv", show_col_types = FALSE) %>%
@@ -192,7 +193,7 @@ fillCF <- function(species_itis = NULL,
                    data_years = NULL,
                    sex_type = "NONE",
                    tab_blocks = list(autofillLW = FALSE,
-                                     mkt_missing = NULL,
+                                     mkt_missing = "keep",
                                      check_missing = FALSE),
                    tab_prorate = NULL,
                    tab_regions = NULL,
@@ -209,7 +210,7 @@ fillCF <- function(species_itis = NULL,
   if(is.null(tab_blocks$check_missing) == TRUE){ # If setting is not provided, ensure that the default is FALSE
     tab_blocks$check_missing = FALSE
   }
-  if(is.null(tab_blocks$mkt_missing) == FALSE){ # If manipulating years with missing market categories, check_missing must be TRUE
+  if(is.null(tab_blocks$mkt_missing) == "drop"){ # If manipulating years with missing market categories, check_missing must be TRUE
     tab_blocks$check_missing == TRUE
   } 
     
@@ -287,6 +288,8 @@ fillCF <- function(species_itis = NULL,
                              BLOCK_TYPE = "CUSTOM",
                              MONTH_START = as.numeric(1:12)) %>% 
       mutate(MONTH_END = MONTH_START)
+    mkt_missing_yr <- "Not calculated since check_missing = FALSE"
+    regions_missing <- "Not calculated since check_missing = FALSE"
   } else if(tab_blocks$block_opt == "QUARTER"){ # Implement quarterly blocks for each market category and year
     tempBlock <- expand.grid(YEAR = data_years,
                              NESPP4 = tab_blocks$nespp4,
@@ -294,6 +297,8 @@ fillCF <- function(species_itis = NULL,
                              BLOCK_TYPE = "QUARTER",
                              MONTH_START = c(1,4,7,10)) %>% 
       mutate(MONTH_END = MONTH_START+2)
+    mkt_missing_yr <- "Not calculated since check_missing = FALSE"
+    regions_missing <- "Not calculated since check_missing = FALSE"
   } else if(tab_blocks$block_opt == "SEMESTER"){ # Implement semester blocks for each market category and year
     tempBlock <- expand.grid(YEAR = data_years,
                              NESPP4 = tab_blocks$nespp4,
@@ -301,6 +306,8 @@ fillCF <- function(species_itis = NULL,
                              BLOCK_TYPE = "SEMESTER",
                              MONTH_START = c(1,7)) %>% 
       mutate(MONTH_END = MONTH_START+5)
+    mkt_missing_yr <- "Not calculated since check_missing = FALSE"
+    regions_missing <- "Not calculated since check_missing = FALSE"
   } else if(tab_blocks$block_opt == "ANNUAL"){ # Implement a single annual block for each market category and year
     tempBlock <- expand.grid(YEAR = data_years,
                              NESPP4 = tab_blocks$nespp4,
@@ -308,6 +315,8 @@ fillCF <- function(species_itis = NULL,
                              BLOCK_TYPE = "ANNUAL",
                              MONTH_START = c(1),
                              MONTH_END = c(12)) 
+    mkt_missing_yr <- "Not calculated since check_missing = FALSE"
+    regions_missing <- "Not calculated since check_missing = FALSE"
   } else if(tab_blocks$block_opt == "checkLENGTHS" | tab_blocks$check_missing == TRUE){ 
     ## Read in ages and lengths if 1) blocking should be done based on length availability, or 2) code should check for missing market categories in data_years
     
@@ -322,7 +331,8 @@ fillCF <- function(species_itis = NULL,
     
     # Pull lengths by species, stock, and year
     checkLengths <- ROracle::dbGetQuery(connection, statement = paste0("SELECT * FROM stockeff_pre_prod.mv_cf_stock_data_length_o WHERE species_itis = ", species_itis, " AND stock_abbrev = '", stock_abbrev,"'", " AND year >= ", data_years[1], " AND year <= ", data_years[length(data_years)])) %>%
-      filter(NESPP4 %in% paste0("0",tab_blocks$nespp4)) %>% # Add 0 at start of NESPP4 code and filter only the selected market categories
+      # filter(NESPP4 %in% paste0("0",tab_blocks$nespp4)) %>% # Add 0 at start of NESPP4 code (codes are 4 digits long) and filter only the selected market categories
+      filter(NESPP4 %in% tab_blocks$nespp4) %>% # Filter to only selected market categories
       left_join(.,tab_REGIONS[,c("AREA", "REGION_ID", "YEAR")], by = c("AREA", "YEAR")) %>%
       mutate(SEM = case_when(QTR %in% c(1,2) ~ 1,
                              QTR %in% c(3,4) ~ 2))
@@ -332,7 +342,8 @@ fillCF <- function(species_itis = NULL,
       if(nrow(regions_missing) == 0){ # If no regions missing, also check for missing market categories
         mkt_missing_yr <- expand.grid(YEAR = data_years,
                                       QTR = as.character(1:4),
-                                      NESPP4 = paste0("0",tab_blocks$nespp4)) %>% 
+                                      NESPP4 = as.character(tab_blocks$nespp4)) %>%
+                                      #NESPP4 = as.character(paste0("0",tab_blocks$nespp4))) %>% 
           mutate(SEM = case_when(QTR %in% c(1,2) ~ 1,
                                  QTR %in% c(3,4) ~ 2)) %>%
           left_join({checkLengths %>% group_by(YEAR, NESPP4) %>% summarise(LENGTHS_ANN = sum(NO_AT_LENGTH, na.rm = TRUE))}) %>% # NAs in LENGTHS_ANN when no lengths for that year/NESPP4 grouping
@@ -345,7 +356,7 @@ fillCF <- function(species_itis = NULL,
         mkt_missing_yr <- "Not calculated due to missing regions, check that tab_regions$stat_area input is complete."
       }
 
-    }
+    } 
     
     # Disconnect from database
     dbDisconnect(connection)
@@ -354,13 +365,14 @@ fillCF <- function(species_itis = NULL,
       # Check lengths
       defineBlocks <- expand.grid(YEAR = data_years,
                                   QTR = as.character(1:4),
-                                  NESPP4 = paste0("0",tab_blocks$nespp4)) %>% 
+                                  NESPP4 = tab_blocks$nespp4) %>%
+                                  # NESPP4 = paste0("0",tab_blocks$nespp4)) %>% 
         mutate(SEM = case_when(QTR %in% c(1,2) ~ 1,
                                QTR %in% c(3,4) ~ 2)) %>%
         # Sum lengths by quarter
-        left_join(.,{checkLengths %>% group_by(YEAR, NESPP4, QTR) %>% summarise(LENGTHS_QTR = sum(NO_AT_LENGTH))}) %>%
-        left_join({checkLengths %>% group_by(YEAR, NESPP4, SEM) %>% summarise(LENGTHS_SEM = sum(NO_AT_LENGTH))}) %>%
-        left_join({checkLengths %>% group_by(YEAR, NESPP4) %>% summarise(LENGTHS_ANN = sum(NO_AT_LENGTH))}) %>%
+        left_join(.,{checkLengths %>% group_by(YEAR, NESPP4, QTR) %>% mutate(NESPP4 = as.numeric(NESPP4)) %>% summarise(LENGTHS_QTR = sum(NO_AT_LENGTH))}) %>%
+        left_join({checkLengths %>% group_by(YEAR, NESPP4, SEM) %>% mutate(NESPP4 = as.numeric(NESPP4)) %>% summarise(LENGTHS_SEM = sum(NO_AT_LENGTH))}) %>%
+        left_join({checkLengths %>% group_by(YEAR, NESPP4) %>% mutate(NESPP4 = as.numeric(NESPP4)) %>% summarise(LENGTHS_ANN = sum(NO_AT_LENGTH))}) %>%
         
         # Replace NAs with 0s used in checking complete market sampling
         mutate(LENGTHS_QTR = ifelse(is.na(LENGTHS_QTR), 0, LENGTHS_QTR),
@@ -369,10 +381,11 @@ fillCF <- function(species_itis = NULL,
         group_by(YEAR) %>% mutate(mktComplete = ifelse(any(LENGTHS_ANN == 0), FALSE, TRUE)) %>%
         group_by(YEAR, NESPP4, SEM, QTR) %>%
         dplyr::summarise(lengths_QTR = unique(LENGTHS_QTR), lengths_SEM = unique(LENGTHS_SEM), lengths_ANN = unique(LENGTHS_ANN), REGION_ID = unique(REGION_ID)) %>% # Collapse duplicates by month
-        group_by(YEAR, NESPP4) %>%
+        group_by(YEAR, NESPP4, REGION_ID) %>%
         summarise(BLOCK_TYPE = case_when((sum(lengths_QTR >= tab_blocks$minLenSample) == 4) ~ "QUARTER", # Assign block
                                          (sum(lengths_SEM >= tab_blocks$minLenSample) == 4) ~ "SEMESTER", #!!1 doesn't work, lengths_SEM needs to check if sufficient lengths in both semester, currently if <4 quarters sampled then won't do annual blocking even if # of lengths is correct, need to add expand.grid at beginning like Charles' code did in order to guarantee 4 months of info
-                                         (sum(lengths_ANN >= tab_blocks$minLenSample) == 4) ~ "ANNUAL"), # BLOCK_TYPE = NA if 1+ market category not sampled in a given year
+                                         (sum(lengths_ANN >= tab_blocks$minLenSample) == 4) ~ "ANNUAL",
+                                         .default = "Insufficient_Samples"), # Return "Insufficient_Samples if market category missing or annual number of samples < minLenSample
                   REGION_ID = unique(REGION_ID)) # Retain for final tab_BLOCKS formatting
       
       quarters <- expand.grid(BLOCK_TYPE = "QUARTER",
@@ -396,34 +409,39 @@ fillCF <- function(species_itis = NULL,
     tempBlock <- tempBlock %>% filter(YEAR %in% mkt_missing_yr$YEAR == FALSE)
   } 
   
-  # Auto-fill LW_ID using month and year range provide with each L-W relationship(if no option satisfied then return NA and must revisit by hand)
-  tempBlock$LW_ID <- NA
-  # Fill based on specified LW months
+  # Fill LW_ID using month and year range provide with each L-W relationship(if no option satisfied then return NA and must revisit by hand), if not-autofilled, only exact matches returned
+  tempBlock$LW_ID <- rep(NA, nrow(tempBlock))
+  
   noAnnual <- tab_LW_PARAMS %>% filter(LW_TYPE != "ANNUAL") # Handle separately, otherwise risk using ANNUAL L-W for all blocks
-  for(iLW in 1:nrow(noAnnual)){
-    tempBlock$LW_ID[which(as.numeric(tempBlock$MONTH_START) >= as.numeric(tab_LW_PARAMS$MONTH_START[iLW]) & # Check if months fully overlap with a LW definition: 
-                            as.numeric(tempBlock$MONTH_START) <= as.numeric(tab_LW_PARAMS$MONTH_END[iLW]) & 
-                            as.numeric(tempBlock$MONTH_END) <= as.numeric(tab_LW_PARAMS$MONTH_END[iLW]) &
-                            as.numeric(tempBlock$YEAR) %in% tab_LW_PARAMS$YEAR_START[iLW]:tab_LW_PARAMS$YEAR_END[iLW]
-                            )] <- tab_LW_PARAMS$LW_ID[iLW] 
-  }
-  # Fill LW_ID with exact month and year matches
-  tempBlock$LW_ID <- NA
-  for(iLW in 1:nrow(noAnnual)){
-    tempBlock$LW_ID[which(as.numeric(tempBlock$MONTH_START) == as.numeric(tab_LW_PARAMS$MONTH_START[iLW]) &
-                          as.numeric(tempBlock$MONTH_END) == as.numeric(tab_LW_PARAMS$MONTH_END[iLW]) &
-                          as.numeric(tempBlock$YEAR) %in% tab_LW_PARAMS$YEAR_START[iLW]:tab_LW_PARAMS$YEAR_END[iLW])] <- tab_LW_PARAMS$LW_ID[iLW]
-  }
-  if(tab_blocks$autofillLW == TRUE){
-    # Fill remaining LW_ID when block months entirely overlap LW months AND fall within LW year range, if no LW_IDs meet this condition then the ID remains an NA
-    for(iLW in 1:nrow(noAnnual)){
-      tempBlock$LW_ID[which(is.na(tempBlock$LW_ID) & # Of remaining rows with no LW_ID assigned check the following:
-                              as.numeric(tempBlock$MONTH_START) >= as.numeric(tab_LW_PARAMS$MONTH_START[iLW]) & # Check if months fully overlap with a LW definition: 
-                              as.numeric(tempBlock$MONTH_START) <= as.numeric(tab_LW_PARAMS$MONTH_END[iLW]) & 
-                              as.numeric(tempBlock$MONTH_END) <= as.numeric(tab_LW_PARAMS$MONTH_END[iLW]) &
-                              as.numeric(tempBlock$YEAR) %in% tab_LW_PARAMS$YEAR_START[iLW]:tab_LW_PARAMS$YEAR_END[iLW])] <- tab_LW_PARAMS$LW_ID[iLW] # Check if year falls within LW definition, if yes assign that LW_ID
+  if(nrow(noAnnual) !=0){
+    
+    # Auto-fill LW_ID using month and year range provide with each L-W relationship(if no option satisfied then return NA and must revisit by hand)
+    if(tab_blocks$autofillLW == TRUE){
+      # First fill exact matches
+      for(iLW in 1:nrow(noAnnual)){
+        tempBlock$LW_ID[which(as.numeric(tempBlock$MONTH_START) == as.numeric(noAnnual$MONTH_START[iLW]) &
+                                as.numeric(tempBlock$MONTH_END) == as.numeric(noAnnual$MONTH_END[iLW]) &
+                                as.numeric(tempBlock$YEAR) %in% noAnnual$YEAR_START[iLW]:noAnnual$YEAR_END[iLW])] <- noAnnual$LW_ID[iLW]
+      }
+      # Fill based on complete overlap with LW months, if no LW_IDs meet these conditions then the ID remains an NA (e.g. when insufficient samples)
+      for(iLW in 1:nrow(noAnnual)){
+        tempBlock$LW_ID[which(is.na(tempBlock$LW_ID) & # Of remaining rows with no LW_ID assigned, check the following
+                                as.numeric(tempBlock$MONTH_START) >= as.numeric(noAnnual[iLW]) & # Check if months fully overlap with a LW definition: 
+                                as.numeric(tempBlock$MONTH_START) <= as.numeric(noAnnual$MONTH_END[iLW]) & 
+                                as.numeric(tempBlock$MONTH_END) <= as.numeric(noAnnual$MONTH_END[iLW]) &
+                                as.numeric(tempBlock$YEAR) %in% noAnnual$YEAR_START[iLW]:noAnnual$YEAR_END[iLW])] <- noAnnual$LW_ID[iLW] # Check if year falls within LW definition, if yes assign that LW_ID
+      }
+    } else{ # if tab_blocks$autofillLW == FALSE, only return exact matches
+      for(iLW in 1:nrow(noAnnual)){
+        tempBlock$LW_ID[which(as.numeric(tempBlock$MONTH_START) == as.numeric(noAnnual$MONTH_START[iLW]) &
+                                as.numeric(tempBlock$MONTH_END) == as.numeric(noAnnual$MONTH_END[iLW]) &
+                                as.numeric(tempBlock$YEAR) %in% noAnnual$YEAR_START[iLW]:noAnnual$YEAR_END[iLW])] <- noAnnual$LW_ID[iLW]
+      }
     }
+  } else{ # End fill for LW_TYPE != "ANNUAL"
+    warning("Only Annual LW parameters provided")
   }
+  
   
   # Fill annual LW if available
   if("ANNUAL" %in% tab_LW_PARAMS$LW_TYPE){
@@ -500,7 +518,7 @@ fillCF <- function(species_itis = NULL,
                      "LENGTH_IMPUTATIONS" = as.data.frame(tab_LENGTH_IMPUTATIONS))
   
   # Actually write to template
-  library("writexl")
+  library(writexl)
   write_xlsx(write_list, paste0(outfile, ".xlsx")) # Drop information used in setting up tab_BLOCKS but not required in tab_LW_PARAMS before writing to template
   
   # Return
