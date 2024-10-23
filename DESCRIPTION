@@ -1,0 +1,12 @@
+Package: pdbCollaborations
+Type: Package
+Title: READ PDB Collaborations
+Version: 0.1.0
+Author: Amanda Hart
+Maintainer: Amanda Hart
+Description: R package implementation of READ-PDB-COLLABORATIONS repository, most contributors to this repostitory are contributing authors for this package.
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.3.2
+Imports: dplyr, tidyr, ggplot2, quarto, tidyverse, DataExplorer, writexl, DBI, readxl, tidylog, wham, httr
