@@ -3,11 +3,11 @@
 #' @description
 #' Random effects can allow a cohort to increase from one year and age to the next year and age. This function makes a plot to quickly identify when this happens.
 #' 
-#' @ param mod A model result from WHAM, can be either single WHAM or multi WHAM.
+#' @param mod A model result from WHAM, can be either single WHAM or multi WHAM.
 #'
-#' @ return A ggplot showing the relative percent change for each cohort (including the plus group) with the number denoting the age and year of the surviving fish. Values above zero (the red dashed line) indicate the cohort has increased. Values above 100 may be cause for concern.
+#' @return A ggplot showing the relative percent change for each cohort (including the plus group) with the number denoting the age and year of the surviving fish. Values above zero (the red dashed line) indicate the cohort has increased. Values above 100 may be cause for concern.
 #'
-#' @ example
+#' @examples
 #' mod <- readRDS("m38.RDS")
 #' p <- check_for_cohort_increase(mod)
 #' ggsave(filename = "my_cohort_check.png", p)

@@ -1,13 +1,13 @@
 #' @title Function to calculate P* FROM RELATIVE BIOMASS AND COUNCIL POLICY
 #' 
 #' @description Calculates P* using input of the Biomass relative to target 
-#' @source from M. Wilberg, originally 7-26-2011, updated with new MAFMC P* policy 5-10-2022
+#' @author E Liljestrand, expanded code from M. Wilberg, originally 7-26-2011, updated with new MAFMC P* policy 5-10-2022
 #' 
 #' @param relB B/Bmsy
 #' 
 #' @return P* 
 #' 
-#' @example
+#' @examples
 #' Pstar <- calc_pstar(1.55)
 
 calc_pstar <- function(relB)

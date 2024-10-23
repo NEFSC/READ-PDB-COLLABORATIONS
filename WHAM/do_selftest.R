@@ -1,10 +1,10 @@
-#--------------
+#' @title do_selftest
 #' @description
 #' Perform simulation self-test of a WHAM model.
 #' 
 #' @param mod wham model created with `fit_wham()`
 #' @param n_sim number of simulations to perform
-#' @ return data.frame of annual true and estimated F, R, and SSB
+#' @return data.frame of annual true and estimated F, R, and SSB
 do_selftest <- function(mod, n_sim) {
 
   sim_inputs <- replicate(n_sim, sim_fn(mod), simplify=FALSE)

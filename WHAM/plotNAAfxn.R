@@ -7,7 +7,7 @@
 #' 
 #' @return A ggplot. Must use ggsave after running the function to save the plot
 #'
-#' @example 
+#' @examples 
 #' naaplot=plotNAAfxn(mods=mod,cor="NA")
 #' ggsave(paste("YOURNAME","_NAAdevs.jpeg"),naaplot,path=YOURPATH)
 

@@ -23,7 +23,7 @@
 #' 
 #' @return A .qmd and output slides in the selected slideOut directory to compare the specified model runs
 #'
-#' @example 
+#' @examples
 #' # Generalized file paths and labels are purely for demonstration and would need to be updated to run on individual machines
 #' compareWHAMslides(plotPaths = c(here::here("model1_folder/plots_png"),
 #'                                 here::here("model2_folder/plots_png")),

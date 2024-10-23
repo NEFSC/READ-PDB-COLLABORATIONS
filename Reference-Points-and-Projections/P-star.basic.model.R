@@ -1,8 +1,7 @@
 #' @title Conduct the P* projections for the MAFMC
 #' 
 #' @description Conducts the P* projections, which incorporates uncertainty and risk in ABC calculation from OFL using a fitted WHAM model 
-#' @source from C Adams for butterfish 7-5-2022
-#' @expanded by E Liljestrand 7-19-2024
+#' @author E Liljestrand 7-19-2024, expanded code provided by C Adams for butterfish 7-5-2022
 #' 
 #' @param mod An rds from a WHAM fit
 #' @param SSBmsy the SSBmsy proxy used to calculate ratio between biomass and reference point
@@ -13,7 +12,7 @@
 #' 
 #' @return a model object with the years of projected values based on P* catch advice 
 #' 
-#' @example
+#' @examples
 #' mod <- readRDS("Modeling/Run3/fit.RDS")
 #' SSBmsy <- 11225        
 #' catch.year1 <- 7557

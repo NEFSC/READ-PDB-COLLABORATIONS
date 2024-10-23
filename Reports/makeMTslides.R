@@ -168,7 +168,7 @@ makeMTslides <- function(wham_model = NULL,
   # Bridge runs
   write("## Bridge runs")
   
-  # Model fit to fleet 
+  # Model fit to aggregate fleet 
   for(iregion in 1:n_region){ # If multi_wham == FALSE n_region = 1 so only does this loop once
     for(ifleet in 1:n_fleet){
       # Format slide
@@ -201,7 +201,7 @@ makeMTslides <- function(wham_model = NULL,
   for(iregion in 1:n_region){ # If multi_wham == FALSE n_region = 1 so only does this loop once
     for(ifleet in 1:n_fleet){
       # Format slide
-      write(paste0("## Aggregate fit to ", fleet_names[ifleet], " fleet"), slideOut, append = TRUE) # write title
+      write(paste0("## Fit to ", fleet_names[ifleet], " fleet age composition"), slideOut, append = TRUE) # write title
       write(":::: {.columns}", slideOut, append = TRUE) # Initialize columns
       
       # OSA bubble plot
@@ -222,7 +222,7 @@ makeMTslides <- function(wham_model = NULL,
     } # End loop over fleets
   } # End loop over regions
   
-  # Model fit to indices
+  # Model fit to aggregate indices
   for(iregion in 1:n_region){ # If multi_wham == FALSE n_region = 1 so only does this loop once
     for(index in 1:n_index){
       # Format slide
@@ -245,6 +245,35 @@ makeMTslides <- function(wham_model = NULL,
       #write(index_names[index], slideOut, append = TRUE)
       write("", slideOut, append = TRUE) # Must have empty space or plots not pulled into powerpoint
       write(paste0("![](", paste(plotPath,"diagnostics", paste0("OSA_resid_catch_4panel_index_", index, ".png"), sep="/"),")"), slideOut, append = TRUE)
+      write(":::", slideOut, append = TRUE)
+      
+      write("::::", slideOut, append = TRUE) # End columns
+    } # End loop over indices
+  } # End loop over regions
+  
+  # Model fit to index age comps
+  for(iregion in 1:n_region){ # If multi_wham == FALSE n_region = 1 so only does this loop once
+    for(index in 1:n_index){
+      # Format slide
+      write(paste0("## Fit to ", index_names[index]," index age composition"), slideOut, append = TRUE) # write title
+      write(":::: {.columns}", slideOut, append = TRUE) # Initialize columns
+      
+      # Bubble plot
+      write("::: {.column width='50%'}", slideOut, append = TRUE)
+      #write(index_names[index], slideOut, append = TRUE)
+      write("", slideOut, append = TRUE) # Must have empty space or plots not pulled into powerpoint
+      if(multi_wham == TRUE){
+        write(paste0("![](", paste(plotPath,"diagnostics", paste0("Catch_age_comp_osa_resids_index_", index, "_region_", iregion, ".png"), sep="/"),")"), slideOut, append = TRUE) 
+      } else{
+        write(paste0("![](", paste(plotPath,"diagnostics", paste0("Catch_age_comp_osa_resids_index_", index, ".png"), sep="/"),")"), slideOut, append = TRUE) 
+      }
+      write(":::", slideOut, append = TRUE)
+      
+      # OSA column 
+      write("::: {.column width='50%'}", slideOut, append = TRUE)
+      #write(index_names[index], slideOut, append = TRUE)
+      write("", slideOut, append = TRUE) # Must have empty space or plots not pulled into powerpoint
+      write(paste0("![](", paste(plotPath,"diagnostics", paste0("OSA_resid_paa_6panel_index_", index, ".png"), sep="/"),")"), slideOut, append = TRUE)
       write(":::", slideOut, append = TRUE)
       
       write("::::", slideOut, append = TRUE) # End columns

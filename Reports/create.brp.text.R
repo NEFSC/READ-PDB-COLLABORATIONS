@@ -6,8 +6,8 @@
 #' \itemize{
 #'   \item{BRP - Name of the BRP}
 #'   \item{est - BRP estimates}
-#'   \item{lo_95 - Lower 95% confidence bound}
-#'   \item{hi_95 - Upper 95% confidence bound}
+#'   \item{lo_95 - Lower 95\% confidence bound}
+#'   \item{hi_95 - Upper 95\% confidence bound}
 #'   \item{source - Model source, either "prior" for prior assessment or "MT" for current assessment}
 #' }
 #' 

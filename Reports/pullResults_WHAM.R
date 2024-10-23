@@ -6,9 +6,9 @@
 #' 
 #' @return A list containing the following
 #' \itemize{
-#'   \item{brps - A table of BRP estimates with 95% CI for F, SSB and MSY proxies}
+#'   \item{brps - A table of BRP estimates with 95\% CI for F, SSB and MSY proxies}
 #'   \item{NAA - A table of NAA}
-#'   \item{FAA - A table of FAA}
+#'   \item{ FAA - A table of FAA}
 #'   \item{Mohns_rho - A list of Mohn's rho values for F, SSB, and NAA}
 #'   \item{F.yr - A table containing a time series of F estimates and CVs}
 #'   \item{F.yr_adj - F.yr table with Mohn's rho adjustments}
@@ -16,8 +16,9 @@
 #'   \item{SSB.yr_adj - SSB.yr table with Mohn's rho adjustments}
 #'   \item{Rect.yr - A table containing a time series of Recruitment and CVs}
 #'   \item{Rect.yr_adj - Rect.yr table with Mohn's rho adjustments}
-#'   \item{termyr.ests.cis - A table of terminal year estimates of F, SSB, and Recruitment with 95% and 90% CIs}
+#'   \item{termyr.ests.cis - A table of terminal year estimates of F, SSB, and Recruitment with 95\% and 90\% CIs}
 #' }
+
 
 
 #model <- readRDS("C:/Users/amanda.hart/Cod_GBK/MT/Cod_GB_MT_2024/Bridge_runs/9_bridge_reviseCV_NEFSC/9_bridge_model.rds")

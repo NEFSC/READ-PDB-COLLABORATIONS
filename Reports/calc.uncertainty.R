@@ -1,6 +1,5 @@
-#' @param log.est An estimated time series in log space, no default.
-#' @param log.se A vector of log standard errors corresponding to the estimated time series, no default. 
-#' 
+#' @title Calculate uncertainty
+#' @description Calculate CV, 90% and 95% CI given a model estimate and standard error.
 #' @param log.est An estimated time series in log space, no default.
 #' @param log.se A vector of log standard errors corresponding to the estimated time series, no default. 
 #' 
@@ -11,9 +10,12 @@
 #'   \item{CV - Accompanying CVs}
 #'   \item{lo_95 - Lower 95% confidence intervals}
 #'   \item{hi_95 - Upper 95% confidence intervals}
-#'   \item{lo_90 - Lower 99% confidence intervals}
-#'   \item{hi_90 - Upper 99% confidence intervals}
+#'   \item{lo_90 - Lower 90% confidence intervals}
+#'   \item{hi_90 - Upper 90% confidence intervals}
 #' }
+#' 
+#' @md
+
 calc.uncertainty <- function(log.est = NULL,
                              log.se = NULL){
   result <- cbind(log.est, log.se) %>% as.data.frame() %>%

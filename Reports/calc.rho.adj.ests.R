@@ -1,10 +1,10 @@
 #' @title calc.rho.adj.ests
 #' @description Calculate rho-adjusted time series based on 90% CI
 #' @param series A data frame containing the following columns:
-#' \itemise{
-#'   \item{est - Estimated time series}
-#'   \item{lo_90 Lower 90% CI for estimates}
-#'   \item{hi_90 Upper 90% CI for estimates}
+#' * est -  Estimated time series
+#' * lo_90 - Lower 90% CI for estimates
+#' * hi_90 - Upper 90% CI for estimates
+#' @md
 #' @param rho Mohn's rho value associated with the time series.
 #' 
 #' @return A data table containing original and rho-adjusted time series with accompanying 90% CI. 
