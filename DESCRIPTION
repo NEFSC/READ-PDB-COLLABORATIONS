@@ -2,8 +2,7 @@ Package: pdbCollaborations
 Type: Package
 Title: READ PDB Collaborations
 Version: 0.1.0
-Author: Amanda Hart
-Maintainer: Amanda Hart
+Authors@R: c(person("Amanda", "Hart", role = c("aut", "cre"), email = "amanda.hart@noaa.gov"))
 Description: R package implementation of READ-PDB-COLLABORATIONS repository, most contributors to this repostitory are contributing authors for this package.
 License: GPL-3
 Encoding: UTF-8
