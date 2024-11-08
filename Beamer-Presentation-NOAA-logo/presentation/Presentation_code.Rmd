@@ -1,0 +1,356 @@
+---
+title: "Coruscating Title for Your Beamer Presentation"
+subtitle: (Your dazzling subtitle goes here)
+author: Liz Brooks
+institute: NEFSC, Population Dynamics Branch
+output: 
+  beamer_presentation: 
+    fig_width: 8
+    fig_height: 5
+# logo: NOAA_FISHERIES_logo_small2.png #skipping this
+fig_caption: FALSE
+theme: "Singapore"
+slide-level: 3
+date: "`r Sys.Date()`"
+
+
+params:
+    # rds.dir: !r here::here('rds' )
+    # fig.dir: !r here::here('figures' )
+    # table.dir: !r here::here( 'tables' )
+    rds.dir: !r file.path(getwd(), '../rds' )
+    fig.dir: !r file.path(getwd(),'../figures' )
+    table.dir: !r file.path(getwd(), '../tables' )
+
+header-includes: 
+- \definecolor{noaaskyblue}{RGB}{31,153,222}
+- \definecolor{noaamedblue}{RGB}{5,25,155}
+- \definecolor{brightblue}{RGB}{25,42,248}
+- \definecolor{brightred}{RGB}{255,05,05}
+- \setbeamercolor{structure}{fg=noaamedblue}
+- \setbeamercolor{title}{fg=noaamedblue}
+- \setbeamercolor{subtitle}{fg=brightred}
+- \setbeamerfont{subtitle}{shape=\itshape} 
+- \setbeamercolor{author}{fg=noaamedblue}
+- \setbeamercolor{institute}{fg=noaamedblue}
+- \setbeamercolor{date}{fg=noaamedblue}
+- \setbeamercolor{blocktitle}{fg=noaamedblue}
+- \setbeamercolor{section in head/foot}{bg=noaaskyblue}
+- \setbeamercolor{page number in head/foot}{fg=noaamedblue}
+- \setbeamertemplate{footline}[page number]
+- \addtobeamertemplate{footline}{ \includegraphics[width=1.5cm]{NOAA_FISHERIES_logo_small2.png } }{\vskip0pt}
+editor_options: 
+  chunk_output_type: inline
+  
+# color names that are recognized by latex are here: 
+#  https://en.wikibooks.org/wiki/LaTeX/Colors#The_68_standard_colors_known_to_dvips 
+urlcolor: blue
+linkcolor: NavyBlue
+
+
+---
+
+
+ 
+# Yaml
+
+
+## Yaml Stuff
+- This is a beamer presentation
+- There are lots of [template styles online](https://hartwork.org/beamer-theme-matrix/)
+- Here's [another resource](https://garrettgman.github.io/rmarkdown/beamer_presentation_format.html#overview)
+
+
+<!-- -- Load libraries and specify directories that are referenced in chunks below -->
+<!-- this is my sneaky way to load libraries once near the top of the Rmd file -->
+<!-- if i moved this chunk before the first '#' it would create a blank slide! -->
+<!-- so instead i'm sticking it here on the first topic slide -->
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+
+library(kableExtra)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+  
+ 
+```
+
+
+
+## Requirements
+
+- Note that this produces pdf output
+- You'll need some flavor of TeX 
+
+<!-- -- example chunk to include figure from file -->
+```{r, echo=FALSE, message=FALSE, warning=FALSE, out.width='60%', fig.align='center'}
+ knitr::include_graphics(file.path( "beamer_requirements.PNG" )  )
+```
+
+
+
+## Singapore
+- I started with the Singapore template
+- I customized elements like the color scheme of text, header and footer background, slide number, etc.
+
+## Other elements
+- The date is automatically updated on title slide with code following "date:"
+- I set some parameters ("params:") to make it shorter to reference directories (and quicker to update or modify for another presentation)
+- You can keep this in mind for your work flow when running models and saving final output so it's easy to grab for your presentation
+
+
+## Get Started on Your Own Beamer
+- You can grab the file **Presentation_code.Rmd** in the folder *presentation*
+- Just modify these elements in the header
+  - title
+  - subtitle (if using one)
+  - author
+  - institute
+- point to your own figures, tables, results, etc. 
+  - modify these in the params section of the yaml, e.g.:
+  
+    fig.dir: !r here::here('figures' )
+
+
+<!-- i use the line below to visually separate between Table of Content items, but it is not mandatory -->
+<!-- ==================================================================================== -->
+ 
+  
+# T.o.C. 
+
+
+## Table of Contents
+- The single '#' creates the title slide (w/o content) to transition between topics
+- The text beside '#' appears in the header
+- Try to keep these short and simple 
+  - take a gander at the header in this presenation
+  - it could get messy if each topic has a lot of words
+- For assessments, you could title each topic 'TOR-1', 'TOR-2', etc.
+
+
+## Table of Contents (cont.)
+- The double '##' creates the next layer of organization
+- Each '##' within a topic (single '#') appears as an open circle in the header
+- The Table of Contents are links that can be 'clicked' -- takes you to the slide you clicked on
+
+
+##  Another slide
+- Here is another slide
+  - And a sub-bullet
+    - And a sub-sub bullet
+    
+## Slide Levels
+- In the yaml I have: slide-level: 3
+- Below, I've added 3 '#' symbols to create Sub-topics on a slide
+    
+### Third layer - 1
+- what does this do
+
+### Third layer - 2
+- and this?
+  
+
+
+
+<!-- ==================================================================================== -->
+
+# Tables
+
+
+  
+## Often, we want to include tables on our slides 
+  
+- You can read in a csv file and have the table rendered on this slide
+- Just insert a chunk like this (see Rmd file) and you'll get this table: 
+
+<!-- -- example chunk to make a table -->
+```{r,  echo=FALSE, message=FALSE, warning=FALSE}
+
+
+my.table <- read.csv(file=file.path(params$table.dir,
+                                      'fake_table.csv' ), 
+                     header=TRUE, check.names=FALSE  )
+my.table <- cbind(my.table, 'Total Catch (mt)'=(my.table[,2]+my.table[,3]) )
+my.table[, 2:4] <- round(my.table[, 2:4],1)
+
+catch.final.year <- tail(my.table[,ncol(my.table)], 1)
+
+   knitr::kable(my.table, format='latex'  ) %>%
+   kable_styling(font_size=8)
+
+```
+
+
+
+
+
+
+## Referencing data that you've read in
+  
+  - I read in a table on the previous slide
+  - I calculated total catch from landings and discards in a chunk
+      -  I created a variable for catch in the final year
+      - Here is that value: `r catch.final.year`
+      
+
+
+
+
+
+<!-- ==================================================================================== -->
+  
+# Figures
+  
+## A picture is worth a thousand words
+
+
+
+
+<!-- -- example chunk to include figure from file -->
+```{r, echo=FALSE, message=FALSE, warning=FALSE, out.width='90%', fig.align='center'}
+ knitr::include_graphics(file.path(params$fig.dir,  
+                                    "fake.fig.plot.png" )  )
+```
+
+
+## Compare Model Results
+- Maybe you want to show your pretty model
+- And a contender in your model pageant
+
+
+<!-- -- example chunk to include figure from file -->
+```{r, echo=FALSE, message=FALSE, warning=FALSE, out.width='95%', fig.align='center'}
+ knitr::include_graphics(file.path(params$fig.dir,  
+                                   "fake.model.plot.png" ) )
+```
+
+## Make a plot on the fly
+- Maybe you want to read in results and make a plot on the fly
+- Control size and alignment in r chunk options (out.height and fig.align)
+
+<!-- -- example chunk to read output and make a plot -->
+```{r    echo=FALSE, message=FALSE, warning=FALSE,  out.height='75%', fig.align='center'}
+
+
+
+res <- readRDS(file=file.path(params$rds.dir,
+                                      'fake.output.RDS' )  )
+res.df <- data.frame(Year=res$Years, 
+                     SSB1=res$M1$SSB,
+                     SSB2=res$M2$SSB) %>%
+  pivot_longer(cols=SSB1:SSB2, values_to='SSB', names_to='Model', names_prefix='SSB') %>%
+  mutate(Model=paste0('M', Model))
+
+
+
+ggplot(res.df, aes(x=Year, y=SSB, col=Model, linetype=Model)) +
+  geom_line() +
+    theme_light()  +
+  theme(strip.background =element_rect(fill="white", color="grey65"))+
+  theme(strip.text = element_text(colour = 'black', size=12)) +
+  theme(axis.text.x = element_text(size = 12))   + 
+  theme(axis.text.y = element_text(size = 12))   +
+  theme(axis.title.x = element_text(size = 14))   + 
+  theme(axis.title.y = element_text(size = 14))   +
+  theme(legend.position="bottom") +
+  theme(legend.text = element_text(colour="black", size = 10), 
+  legend.title=element_text(size=10, face = "bold")) 
+                       
+
+```
+
+
+## Side by side figures
+
+- Let's revisit the plot on the previous slide
+- can control plot size with fig.dim=c(width, height) and displayed size (out.width) in the chunk options
+- out.width % takes some trial and error (I used "45%" here)
+
+<!-- -- example chunk to read output and make 2 plots -->
+```{r    echo=FALSE, message=FALSE, warning=FALSE,  figures-side, fig.show="hold", fig.align='center', fig.dim=c(5,5), out.width="45%"}
+
+
+
+res <- readRDS(file=file.path(params$rds.dir,
+                                      'fake.output.RDS' )  )
+res.df <- data.frame(Year=res$Years, 
+                     SSB_1=res$M1$SSB,
+                     Catch_1=res$M1$Catch.pred,
+                     SSB_2=res$M2$SSB,
+                     Catch_2=res$M2$Catch.pred)  %>%
+  pivot_longer(-Year, names_to = c(".value", "Model"), names_sep="_" ) %>%
+  mutate(Model=paste0('M', Model))
+
+
+ggplot(res.df, aes(x=Year, y=SSB, col=Model, linetype=Model)) +
+  geom_line() +
+    theme_light()  +
+  theme(strip.background =element_rect(fill="white", color="grey65"))+
+  theme(strip.text = element_text(colour = 'black', size=12)) +
+  theme(axis.text.x = element_text(size = 12))   + 
+  theme(axis.text.y = element_text(size = 12))   +
+  theme(axis.title.x = element_text(size = 14))   + 
+  theme(axis.title.y = element_text(size = 14))   +
+  theme(legend.position="bottom") +
+  theme(legend.text = element_text(colour="black", size = 10), 
+  legend.title=element_text(size=10, face = "bold")) 
+
+ggplot(res.df, aes(x=Year, y=Catch, col=Model, linetype=Model)) +
+  geom_line() +
+    theme_light()  +
+  theme(strip.background =element_rect(fill="white", color="grey65"))+
+  theme(strip.text = element_text(colour = 'black', size=12)) +
+  theme(axis.text.x = element_text(size = 12))   + 
+  theme(axis.text.y = element_text(size = 12))   +
+  theme(axis.title.x = element_text(size = 14))   + 
+  theme(axis.title.y = element_text(size = 14))   +
+  theme(legend.position="bottom") +
+  theme(legend.text = element_text(colour="black", size = 10), 
+  legend.title=element_text(size=10, face = "bold")) 
+                       
+
+```
+
+
+
+
+<!-- ==================================================================================== -->
+  
+# Equations
+  
+## Speak Greek! 
+
+- Greek letters, equations, etc. can be rendered from latex syntax
+- $\alpha$ and $\beta$  are *super* popular
+- $\alpha^2$ is **even more** popular
+- $\frac{\infty}{5}$ is still $\infty$
+
+
+
+
+<!-- ==================================================================================== -->
+  
+# Troubleshooting
+
+## FAQ
+  
+- None yet, but let me know
+
+  
+## Share improvements
+  
+- Please share improvements, comments, etc
+
+
+
+
+<!-- ==================================================================================== -->
+  
+  ---
+  
+  Acknowledgements
+
+- Thank the people who contributed/helped/gave feedback and insights at the end of your presentation
+
+
