@@ -1,0 +1,7 @@
+title = "Gitleaks Config with PNG Exclusion"
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Ignore img src attribute"
+regex = '''<img\s+[^>]src\s=\s*["']data:image/(jpeg|png|gif|svg\+xml);base64,[^"']+["']''' 
