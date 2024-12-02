@@ -5,9 +5,8 @@
 # I ended up putting them all together in a single function for posting
 # to this github page since it's a little more contained that way.
 
-# Not all written by me -- I commandeered calc.rivard.wts() and used
-# it to get the Rivard weights. If you wrote that function please edit yourself
-# into the comments!
+# calc.rivard.wts() -- used to get the Rivard weights -- wasn't written by
+# me; thanks to L. Brooks and possibly others.
 
 # Inputs---
 # my_mat:       Mid-year WAA matrix (as an object of class matrix)
