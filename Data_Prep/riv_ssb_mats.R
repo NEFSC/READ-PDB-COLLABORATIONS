@@ -6,7 +6,7 @@
 # to this github page since it's a little more contained that way.
 
 # calc.rivard.wts() -- used to get the Rivard weights -- wasn't written by
-# me; thanks to L. Brooks and possibly others.
+# me; thanks to Alan Seaver, Liz Brooks and possibly others.
 
 # Inputs---
 # my_mat:       Mid-year WAA matrix (as an object of class matrix)
@@ -188,6 +188,9 @@ riv_ssb_mats <- function(my_mat, riv_ty_avg_n, frac_ann){
     }
     
     ssb_mat <- exp(ssb_mat_log)
+    # Preserve names if they exist
+    row.names(ssb_mat) <- row.names(my_mat)
+    colnames(ssb_mat) <- colnames(my_mat)
     
     return(ssb_mat)
   }
