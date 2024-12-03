@@ -149,11 +149,11 @@ riv_ssb_mats <- function(my_mat, riv_ty_avg_n, frac_ann){
       # If first half of the year
       if(frac_ann >= 0 & frac_ann <= 0.5){
         
+        # Take the annual fraction and convert it into a fraction of a semester
+        frac_sem <- frac_ann / 0.5
+        
         # Cycle through the ages
         for(a in 1:ncol(my_mat)){
-          
-          # Take the annual fraction and convert it into a fraction of a semester
-          frac_sem <- frac_ann / 0.5
           
           # Fill in the log SSB WAA matrix
           ssb_mat_log[y,a] <- riv_mat_log[y,a] + 
@@ -165,12 +165,12 @@ riv_ssb_mats <- function(my_mat, riv_ty_avg_n, frac_ann){
       # If second half of the year  
       }else if(frac_ann > 0.5 & frac_ann < 1){
         
+        # Take the annual fraction and convert it into a fraction of a semester
+        frac_sem <- (frac_ann - 0.5) / 0.5
+        
         # Cycle through ages -- in this case since we use a+1 you can't go all
         # the way to the last age
         for(a in 1:(ncol(my_mat)-1)){
-          
-          # Take the annual fraction and convert it into a fraction of a semester
-          frac_sem <- (frac_ann - 0.5) / 0.5
           
           # Fill in the log SSB WAA matrix
           ssb_mat_log[y,a] <- (my_mat_log[y,a] +
@@ -188,6 +188,7 @@ riv_ssb_mats <- function(my_mat, riv_ty_avg_n, frac_ann){
     }
     
     ssb_mat <- exp(ssb_mat_log)
+    
     # Preserve names if they exist
     row.names(ssb_mat) <- row.names(my_mat)
     colnames(ssb_mat) <- colnames(my_mat)
