@@ -12,4 +12,5 @@ This sub-directory contains WHAM support functions and use examples that are not
 | do_selftest.R | Perform simulation self-tests of fitted WHAM model | Charles Perretti / Brian Stock |
 | make_simtest_plots.R | Plot simulation self-tests | Charles Perretti / Chris Legault |
 | sim_fn.R | Self-simulation function | Charles Perretti / Brian Stock |
-| check_for_cohort_increase.R | Look for bad random effects in NAA | Chris Legault |
+| demo_projected_cohort_contributions.R | Script demonstrating how to plot the proportion of each cohort in the projections (including projected recruits, a.k.a. paper fish) | Charles Perretti|
+
