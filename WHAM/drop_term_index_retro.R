@@ -7,7 +7,7 @@
 #'
 #' @return A list containing the results of each fit. Also saves a png plot of NAA devs from each fit and the SSB retro where the selected index data are missing from each terminal year. Saved to the working directory
 #'
-#' @examples 
+#' @example 
 #' #drops all indices from a fit
 #' droptermIndex=drop_term_index_retro(model=mod,drop=list(indices=1:mod$input$data$n_indices,index_paa=1:mod$input$data$n_indices)) 
 #' drop whatever index 2 is from a fit

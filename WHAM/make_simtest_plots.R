@@ -1,4 +1,4 @@
-#' @title make_simtest_plots
+#--------------
 #' @description
 #' Automated creation of plots from a WHAM simulation self-test. Main plot shows mean, median, and 5%, 25%, 75%, 95% quantiles. 
 #' Optional additional plots show only mean with standard error, only median and quantiles, and numerous realizations. 
@@ -11,7 +11,7 @@
 #' @param savepng Boolean (default=FALSE) when TRUE save the selected plot(s) as separate png files
 #' @param myfilename_pdf (default=NULL) name (including filepath if so desired) for pdf to be created
 #' @param mypngprefix (default=NULL) prefix added to default names for all saved png files (including filepath is so desired)
-#' @return list of 8 figures, main figure is first one  
+#' @ return list of 8 figures, main figure is first one  
 
 make_simtest_plots <- function(mod_selftest, saveall=FALSE, savepdf=FALSE, savepng=FALSE, myfilename_pdf=NULL, mypngprefix=NULL){
   

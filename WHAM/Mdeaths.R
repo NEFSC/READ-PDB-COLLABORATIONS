@@ -6,7 +6,7 @@
 #' 
 #' @return A dataframe with two columns. Year and Deaths(000s mt)
 #'
-#' @examples
+#' @example
 #' mod.dir="m168"
 #' write.dir <- paste("C:/Herring/2022 Assessment/Assessments/WHAM",mod.dir,sep="/")
 #' setwd(write.dir)

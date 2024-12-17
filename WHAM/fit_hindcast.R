@@ -8,8 +8,8 @@
 #' 
 #' @return A WHAM model fit
 #'
-#' @examples
-#'  fit_hindcast(model=WHAMRUN.rds, peel=1, drop=list(indices=1:2, index_paa=1:2))
+#' @example 
+#' fit_hindcast(model=WHAMRUN.rds, peel=1, drop=list(indices=1:2, index_paa=1:2))
 
 fit_hindcast <- function(model, peel, drop){
   temp = list(data = model$env$data, par = model$parList, map = model$env$map, random = unique(names(model$env$par[model$env$random])))
