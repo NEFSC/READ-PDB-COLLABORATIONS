@@ -111,14 +111,14 @@ BRho.now <- reportData$MT_MohnsRho["SSB"] %>% round(3) %>% paste0() #the 7 year 
 FRho.old <- reportData$prior_MohnsRho["F"] %>% round(3) %>% paste0()  #the 7 year Mohn's rho on F from the last assessment         #[~]
 FRho.now <- reportData$MT_MohnsRho["F"] %>% round(3) %>% paste0()  #the 7 year Mohn's rho on F from the current assessment         #[~]
 
-Rho.adj_MT <- reportData$MT_retro.signif  #You must use TRUE if you are adjusting your terminal B and F values for status determination   #[~] !!! definitely want to add the status determination in makeReportData
+Rho.adj_MT <- reportData$MT_retro.signif  #You must use TRUE if you are adjusting your terminal B and F values for status determination   #[~] makeReportData() checks if rho-adjusted value falls outside of 90% CI for estimates
 # if you are just reporting rho adjusted values (not using for status) use FALSE #
 B.retro.adj <- reportData$MT_termyr %>% filter(Parameter == "SSB") %>% select(est.adj) %>% as.numeric() %>% round(0) #terminal B adjusted for retro (if applicable)   #[~]
-F.retro.adj <- reportData$MT_termyr %>% filter(Parameter == "F") %>% select(est.adj) %>% as.numeric() %>% round(3)  #terminal F adjusted for retro (if applicable)   #[~] !!! need to confirm that if these values provided but Rho.adj_MT = FALSE they won't be used incorrectly in the report, otherwise nest in the status measures below
+F.retro.adj <- reportData$MT_termyr %>% filter(Parameter == "F") %>% select(est.adj) %>% as.numeric() %>% round(3)  #terminal F adjusted for retro (if applicable)    #[~] !!! need to confirm that if these values provided but Rho.adj_MT = FALSE they won't be used incorrectly in the report, otherwise nest in the status measures below
 
 # Confidence limits only used for rho adjust decision
 BCL <- reportData$MT_termyr %>% filter(Parameter == "SSB") %>% select(lo_90, hi_90) %>% round(0) %>% paste0()  # the confidence limits around the terminal B from the model #[~] 90% CI around unadjusted values
-FCL <- reportData$MT_termyr %>% filter(Parameter == "F") %>% select(lo_90, hi_90) %>% round(3) %>% paste0()  # the confidence limits around the terminal B from the model #[~]
+FCL <- reportData$MT_termyr %>% filter(Parameter == "F") %>% select(lo_90, hi_90) %>% round(3) %>% paste0()  # the confidence limits around the terminal B from the model   #[~]
 
 ## Status text variables PLEASE USE THE EXACT WORDING SHOWN !   (these exact words trigger a switch in the BRP table - others give you a blank)
 # Current assessment
@@ -155,28 +155,28 @@ Stretch<-1.0    #adjust this up if your tables look too cramped vertically (don'
 #this order in your catch data file, but there does need to be something for Fleet1, the others
 #are not required (e.g. you can have Fleet1, Fleet4 and Fleet7 only - just make sure that you fill
 #in the corresponding table names below Fleet1.names, Fleet4.name, Fleet7.name - see line ~185)
-  CYear<-"Year"                #Year column in the catch data                                #[~]
-  Fleet1<- "US.Landings"                                              #[~] #You must have a fleet 1, names CANNOT have spaces in them!
-  Fleet2<- "US.Discards"                                           #[~]
-  Fleet3<-"Canadian.Landings"                                                #[~]
-  Fleet4<-"Canadian.Scallop.Discards"                                                 #[~]
-  Fleet5<-"Canadian.Groundfish.Discards"                                                    #[~]
-  # Fleet6<-"Caland"      #e.g.Canadian landings                                               #[~]
-  # Fleet7<-NULL     #Other discards                                                           #[~]
-  # Fleet8<-NULL     #Other landings                                                           #[~]
+  CYear<-"Year"              # Year column in the catch data                                       #[~]
+  Fleet1<- "Fleet.1"         # You must have a fleet 1, names CANNOT have spaces in them!          #[~] 
+  Fleet2<- "Fleet.2"         # e.g. Landings                                                       #[~]
+  Fleet3<-"Fleet.3"          # e.g. Discards                                                       #[~]
+  Fleet4<-"Fleet.4"                                                                                #[~]
+  Fleet5<-"Fleet.5"                                                                                #[~]
+  # Fleet6<-"NULL"                                                                                 #[~]
+  # Fleet7<-NULL                                                                                   #[~]
+  # Fleet8<-NULL                                                                                   #[~]
   Total<-"Total.Catch"  #Total removals for table (sometimes not = to sum landings + sum discards) #[~]
   #If there are any fleets you do not want included in table 1 - you can use this optional vector to 
   #not include them - just uncomment below
-  #ExcludeFromTab1<-c(Fleet5,Fleet6)    #fleets to not include in table 1                     #[~]
+  #ExcludeFromTab1<-c(Fleet5,Fleet6)    #fleets to not include in table 1                          #[~]
   
   #[~]
   #survey Data
   SurvYear<-"Year"             #Year column in the survey data                    #[~]
   for(isurvey in 1:reportData$n_indices){
     assign(x = paste0("Survey",isurvey), colnames(reportData$indices)[isurvey])
-    assign(x = paste0("Survey",isurvey,".CV"), paste0(colnames(reportData$indices)[isurvey], "_CV")) # Matches convention in makeReportData.R
+    assign(x = paste0("Survey",isurvey,".CV"), paste0(colnames(reportData$indices)[isurvey], "_CV")) # By default matches naming convention in makeReportData.R
   }
-  # Survey1<-"NEFSC_Spring"      #First survey (they will be shown in this order)   #[~]
+  # Survey1<-"NEFSC_Spring"      #First survey (they will be shown in this order)   #[~] Alternatively may specify name of each survey and CV by hand
   # Survey1.CV<-"NEFSC_SpringCV" #First survey cv                                   #[~]
   # Survey2<-"NEFSC_Fall"        #Second survey                                     #[~]
   # Survey2.CV<-"NEFSC_FallCV"   #etc...                                            #[~]
@@ -196,14 +196,14 @@ Stretch<-1.0    #adjust this up if your tables look too cramped vertically (don'
   #Model Output
   ModYear<-"Year"                                                            #[~] Labels are hard coded to match output from makeReportData.R and do not need to be edited     
   ModSSB<-"SSB"                 #SSB estimates from the current model        #[~] 
-  ModSSB.CV<-"SSB.CV"            #CV on SSB from the current model            #[~]
+  ModSSB.CV<-"SSB.CV"            #CV on SSB from the current model           #[~]
   FF<-"F"                       #F estimates from the current model          #[~]
-  FF.CV<-"F.CV"                  #CV on F estimates from the current model    #[~]
-  Recruits<-"Rect"                                                       #[~]
-  Recruits.CV<-"Rect.CV"                                                  #[~]
-  SSB.old<-"prev_SSB"           # SSB estimates from previous assessment       #[~]   
-  F.old<-"prev_F"               # F estimates from previous assessment         #[~]
-  Recruits.old<-"prev_Rect"     # R estimates from previous assessment     #[~]
+  FF.CV<-"F.CV"                  #CV on F estimates from the current model   #[~]
+  Recruits<-"Rect"                                                           #[~]
+  Recruits.CV<-"Rect.CV"                                                     #[~]
+  SSB.old<-"prev_SSB"           # SSB estimates from previous assessment     #[~]   
+  F.old<-"prev_F"               # F estimates from previous assessment       #[~]
+  Recruits.old<-"prev_Rect"     # R estimates from previous assessment       #[~]
 
 #*********************************#
 #     ATTENTION VPA USERS:        #
@@ -222,15 +222,15 @@ Stretch<-1.0    #adjust this up if your tables look too cramped vertically (don'
 #Names for data sources in tables/figs these should exactly how you want them to print!!
 #[~]
 #Fishery names
-Fleet1.name<-"US Landings"      #display name for fleet1    #[~]
-Fleet2.name<-"US Discards"      #display name for fleet2    #[~]
-Fleet3.name<-"Canadian Landings"      #display name for fleet3      #[~]
-Fleet4.name<-"Canadian Scallop Discards"      #display name for fleet4      #[~]
-Fleet5.name<-"Canadian Groundfish Discards"         #display name for fleet5           #[~]
-Fleet6.name<-NULL        #display name for fleet16          #[~] # Must be NULL for fleets 2-8 that are not populated
-Fleet7.name<-NULL        #etc...                                      #[~]
-Fleet8.name<-NULL        #                                            #[~]
-Total.name<-"Combined total catch (US and Canada)"   # Can't contain characters like "&"                                                                     #[~]
+Fleet1.name<-"Fleet 1"      #display name for fleet1    #[~]
+Fleet2.name<-"Fleet 2"      #display name for fleet2    #[~]
+Fleet3.name<-"Fleet 3"      #display name for fleet3    #[~]
+Fleet4.name<-"Fleet 4"      #display name for fleet4    #[~]
+Fleet5.name<-"Fleet 5"      #display name for fleet5    #[~]
+Fleet6.name<-NULL           #display name for fleet6    #[~] Must be NULL for fleets 2-8 that are not populated
+Fleet7.name<-NULL        #etc...                        #[~]
+Fleet8.name<-NULL        #                              #[~]
+Total.name<-"Total Catch"                               #[~] Can't contain characters like "&"                                                                     #[~]
 
 #Survey names
 for(isurvey in 1:reportData$n_indices){
@@ -239,8 +239,8 @@ for(isurvey in 1:reportData$n_indices){
 
 #[~]
 #Model Results Names
-ModSSB.name<-"Spawning Stock Biomass"                 #[~]
-FF.name<-FFull.tx                                     #[~]
+ModSSB.name<-"Spawning Stock Biomass"         #[~]
+FF.name<-FFull.tx                             #[~]
 Recruits.name<-"Recruits"                     #[~]
 
 
@@ -249,9 +249,9 @@ Recruits.name<-"Recruits"                     #[~]
 FMSY.name<-FMSYproxy.tx   #F.MSY.tx                                      #[~]
 SSBMSY.name<-paste(SSBMSY.tx,SSBUnits,sep="")                            #[~]
 MSY.name<-paste("MSY",CatchUnits,sep="")                                 #[~]
-#OFL.name<-paste("OFL",CatchUnits,sep="")                                 #[~] Removed from table
-BRP.Recruits.name<-paste("Median recruits (age 3)",RecrUnits,sep="")     #[~] !!! check this against WHAM - probably median but should check, I have age 1
-F.Status.name<-F.Status.tx                                               #[~]       !!! want this F.Status.tx to align with Fstatus???   - don't need to mess with this should say Fmsy proxy   
+#OFL.name<-paste("OFL",CatchUnits,sep="")                                #[~] Removed from table
+BRP.Recruits.name<-paste("Median recruits (age 3)",RecrUnits,sep="")     #[~] Confirm that this reflects the settings used in WHAM - likely median or mean
+F.Status.name<-F.Status.tx                                               #[~] 
 B.Status.name<-B.Status.tx                                               #[~]                   
 
 
