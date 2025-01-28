@@ -26,6 +26,7 @@ last.assessment<-2008                                     #[~]
 reportData <- readRDS(paste0(dir1,"data/reportData.RDS"))
 library(magrittr)
 library(dplyr)
+  # See makeReportData.R function for detailed description of WHAM results that are available for use in this report via reportData object
 
 #______________________________________________________________________________________________
 #setup (don't modify this!) 
