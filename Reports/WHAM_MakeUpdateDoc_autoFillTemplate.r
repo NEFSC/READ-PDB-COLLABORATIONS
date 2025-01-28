@@ -68,11 +68,12 @@ ci.method<-"lognormal" #method for calculating confidence intervals  #[~] Used w
 bounds<-95 #How big (in percentile units) do you want your ci's to be? #[~] Used to describe bounds for index, SSB, F, R plots 
   
 #[~]
-#BRP Table values (these will appear exactly as you type them if you enclose with "")
-FMSY <- reportData$text_f #old and new FMSY                      #[~] !!! Do I need CI for FMSY as in the template? - report these if available need to change FMSY text to be similar to SSB/MSY
-SSBMSY <- reportData$text_ssb #old and new SSB with CI      #[~]
-MSY <- reportData$text_msy                                    #[~]
-#Recr<-c("11,906","9,076")                                                    #[~]
+#BRP Table values (these will appear exactly as you type them if you enclose with "") 
+  # Includes 95% CI if pulled from reportData object
+FMSY <- reportData$text_f #old and new FMSY with CI                #[~] 
+SSBMSY <- reportData$text_ssb #old and new SSB with CI             #[~]
+MSY <- reportData$text_msy # old and new MSY with CI               #[~]
+#Recr<-c("11,906","9,076") # old and new recruitment               #[~]
 
 #[~]
 #point estimates - need to be numeric for calculations
@@ -81,21 +82,21 @@ SSBMSYpt.est <- reportData$MT_BRPs %>% filter(BRP == "SSBproxy") %>% select(est)
 
 #[~]
 #Other BRP values
-SSBthreshold <- 0.5*SSBMSYpt.est                                                #[~] !!! double check that these are consistent - consistent for most stocks, technically pulled from FMP
+SSBthreshold <- 0.5*SSBMSYpt.est                                                #[~] 
 SSBtarget <- SSBMSYpt.est                                                       #[~]
 Fthreshold <- FMSYpt.est                                                        #[~]
 Ftarget <- FMSYpt.est                                                           #[~]
 
 #[~]
 #Projection table values
-PYear <- reportData$proj_yrs                                            #[~]
-PCatch <- reportData$proj_catch$est                                       #[~]
+PYear <- reportData$proj_yrs                                                    #[~]
+PCatch <- reportData$proj_catch$est                                             #[~]
 #--note that Projected SSB continues onto 2 lines in the below example--#
 PSSB <- paste0(reportData$proj_ssb$est, " (", reportData$proj_ssb$lo_95, " - ", reportData$proj_ssb$hi_95, ")")  #[~]
 #Please use 3 significant digits
-PF <- reportData$proj_F$est                                             #[~] !!! Need to update this after chatting with Kiersten - projected F, pull from the data object
+PF <- reportData$proj_F$est                                                     #[~] Projected F, pull from the data object
 #**** NOTE OFL removed from table, but should be mentioned in caption
-#OFL<-c("2,100","1,900", "1,657", "2,292", "2,292", "2,292")                         #[~]
+#OFL<-c("2,100","1,900", "1,657", "2,292", "2,292", "2,292")                    #[~]
 
 #[~]
 #units for each category 
@@ -105,10 +106,10 @@ RecrUnits<-" (000s)"                                                          #[
 SurveyUnits<-" (kg)"                                                          #[~]
 
 # Retrospective details
-BRho.old <- reportData$prior_MohnsRho["SSB"] %>% round(3) %>% paste0() #the 7 year Mohn's rho on SSB from the last assessment             #[~]
-BRho.now <- reportData$MT_MohnsRho["SSB"] %>% round(3) %>% paste0() #the 7 year Mohn's rho on SSB from the current assessment          #[~]
-FRho.old <- reportData$prior_MohnsRho["F"] %>% round(3) %>% paste0()  #the 7 year Mohn's rho on F from the last assessment               #[~]
-FRho.now <- reportData$MT_MohnsRho["F"] %>% round(3) %>% paste0()  #the 7 year Mohn's rho on F from the current assessment            #[~]
+BRho.old <- reportData$prior_MohnsRho["SSB"] %>% round(3) %>% paste0() #the 7 year Mohn's rho on SSB from the last assessment      #[~]
+BRho.now <- reportData$MT_MohnsRho["SSB"] %>% round(3) %>% paste0() #the 7 year Mohn's rho on SSB from the current assessment      #[~]
+FRho.old <- reportData$prior_MohnsRho["F"] %>% round(3) %>% paste0()  #the 7 year Mohn's rho on F from the last assessment         #[~]
+FRho.now <- reportData$MT_MohnsRho["F"] %>% round(3) %>% paste0()  #the 7 year Mohn's rho on F from the current assessment         #[~]
 
 Rho.adj_MT <- reportData$MT_retro.signif  #You must use TRUE if you are adjusting your terminal B and F values for status determination   #[~] !!! definitely want to add the status determination in makeReportData
 # if you are just reporting rho adjusted values (not using for status) use FALSE #
