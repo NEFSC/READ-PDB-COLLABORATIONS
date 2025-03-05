@@ -67,6 +67,12 @@ LOO=function(mod=NULL,dosdrep=TRUE){
     input.temp=set_selectivity(input.temp,sel)
     input.temp$par$logit_selpars[i+n_fleets,]=Inf #set all pars to max for missing index just as a way to check function
     
+    #turn on or off estimation of log sd of observations scalar for indices
+    if(!is.na(input.temp$map$log_index_sig_scale[i])){
+    input.temp$map$log_index_sig_scale[i]=NA
+    input.temp$map$log_index_sig_scale=factor(input.temp$map$log_index_sig_scale)
+    }
+    
     mod.temp=fit_wham(input.temp,do.osa=F,do.retro = F,do.sdrep = dosdrep,do.check=FALSE)
     
     modname=input.temp$index_names[i]
