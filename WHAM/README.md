@@ -12,5 +12,6 @@ This sub-directory contains WHAM support functions and use examples that are not
 | do_selftest.R | Perform simulation self-tests of fitted WHAM model | Charles Perretti / Brian Stock |
 | make_simtest_plots.R | Plot simulation self-tests | Charles Perretti / Chris Legault |
 | sim_fn.R | Self-simulation function | Charles Perretti / Brian Stock |
-| demo_projected_cohort_contributions.R | Script demonstrating how to plot the proportion of each cohort in the projections (including projected recruits, a.k.a. paper fish) | Charles Perretti|
+| demo_projected_cohort_contributions.R | Script demonstrating how to plot the proportion of each cohort in the projections (including projected recruits, a.k.a. paper fish) | Charles Perretti| 
+| LOO.R | Function to do leave one out for multi-wham | Jon Deroba
 
