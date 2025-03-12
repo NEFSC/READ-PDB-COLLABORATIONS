@@ -51,7 +51,8 @@ read_stockEff <- function(doLogin = TRUE,
       password = rstudioapi::askForPassword("Enter password"),
       submit = "true"
     )
-    POST("https://nefsctest.nmfs.local/stockeff/html/pub/index.php", body = login, encode = "form", verbose())
+    # POST("https://nefsctest.nmfs.local/stockeff/html/pub/index.php", body = login, encode = "form", verbose())
+    POST("https://internal.nefsc.noaa.gov/stockeff/pub/index.php", body = login, encode = "form", verbose())
   }
 
 
@@ -62,7 +63,8 @@ read_stockEff <- function(doLogin = TRUE,
   # Pull selected products from stock eff CSV files
   for(iproduct in 1:length(product)){
     # Pull data as binary file & write to temporary csv
-    res = GET(paste0("https://nefsctest.nmfs.local/stockeff/html/pub/index.php?c=products&product=", product[iproduct], "&module=", module, "&species_itis=",species_itis,"&stock_abbrev=",stock_abbrev,"&sex_type=",sex_type,"&mode=",mode,"&source=all&type=csv"))
+    # res = GET(paste0("https://nefsctest.nmfs.local/stockeff/html/pub/index.php?c=products&product=", product[iproduct], "&module=", module, "&species_itis=",species_itis,"&stock_abbrev=",stock_abbrev,"&sex_type=",sex_type,"&mode=",mode,"&source=all&type=csv"))
+    res = GET(paste0("https://internal.nefsc.noaa.gov/stockeff/pub/index.php?c=products&product=", product[iproduct], "&module=", module, "&species_itis=",species_itis,"&stock_abbrev=",stock_abbrev,"&sex_type=",sex_type,"&mode=",mode,"&source=all&type=csv"))
     bin <- content(res, "raw")
     writeBin(bin, paste0(outdir,"/temp_stockEff.csv")) ## Name your file something meaningful here if you want to reference outside of R.
 
