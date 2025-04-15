@@ -1,6 +1,6 @@
 ---
 title: "MSE Setup"
-author: "Sarah Gaichas"
+author: "Jonathan J. Deroba"
 date: "`r Sys.Date()`"
 output:
   html_document:
@@ -22,205 +22,49 @@ Following the MSE vignette from Chengxue Li at https://lichengxue.github.io/wham
 ```{r}
 library(wham)
 library(whamMSE)
+library(fmsb)
+library(ggpubr)
 
 main.dir = here::here()
 ```
 
-## Run the vignette exactly first, Cheng fixed! works now
+## Modify for short-lived
 
-This is just a test, code not run for html
+Basic info for a short-lived species. Based on @wiedenmann_evaluation_2017, Table 3 B and C.
 
-```{r, eval=FALSE}
-year_start  <- 1  # starting year in the burn-in period
-year_end    <- 20  # end year in the burn-in period
-MSE_years   <- 3     # number of years in the feedback loop
-# Note: no need to include MSE_years in simulation-estimation 
-
-info <- generate_basic_info(n_stocks = 2,
-                            n_regions = 2,
-                            n_indices = 2,
-                            n_fleets = 2,
-                            n_seasons = 4,
-                            base.years = year_start:year_end,
-                            n_feedback_years = MSE_years,
-                            life_history = "medium",
-                            n_ages = 12,
-                            #Fbar_ages = 12,
-                            #recruit_model = 2,
-                            F_info = list(F.year1 = 0.2, Fhist = "F-H-L", Fmax = 2, Fmin = 1, change_time = 0.5, user_F = NULL),
-                            catch_info = list(catch_cv = 0.1, catch_Neff = 100),
-                            index_info = list(index_cv = 0.1, index_Neff = 100, fracyr_indices = 0.625, q = 0.2),
-                            fracyr_spawn = 0.625) 
-
-basic_info = info$basic_info # collect basic information
-catch_info = info$catch_info # collect fleet catch information
-index_info = info$index_info # collect survey information
-F_info = info$F # collect fishing information
-
-# see more details using ?generate_basic_info
-
-basic_info <- generate_NAA_where(basic_info = basic_info, move.type = 2) # "bidirectional" movement
-
-move <- generate_move(basic_info = basic_info, move.type = 2, move.rate = c(0.3,0.1), 
-                      move.re = "iid_y", move.sigma = 0.5, prior.sigma = 0.5, use.prior = TRUE)
-
-n_stocks  <- as.integer(basic_info['n_stocks'])
-n_regions <- as.integer(basic_info['n_regions'])
-n_fleets  <- as.integer(basic_info['n_fleets'])
-n_indices <- as.integer(basic_info['n_indices'])
-n_ages    <- as.integer(basic_info['n_ages'])
-
-# Selectivity Configuration
-fleet_pars <- c(5,1)
-index_pars <- c(2,1)
-sel <- list(model=rep("logistic",n_fleets+n_indices),
-            initial_pars=c(rep(list(fleet_pars),n_fleets),rep(list(index_pars),n_indices)))
-
-# M Configuration
-M <- list(model="constant",initial_means=array(0.2, dim = c(n_stocks,n_regions,n_ages)))
-
-sigma      <- "rec+1"
-re_cor     <- "iid"
-ini.opt    <- "equilibrium" # option   <- c("age-specific-fe", "equilibrium")
-
-# Set para. for B-H function
-alpha <- 12
-beta  <- 1.5e-4
-
-# Set sigma for NAA
-NAA_sig <- 0.2
-sigma_vals = array(NAA_sig, dim = c(n_stocks, n_regions, n_ages)) # n_stocks x n_regions x n_ages"
-
-# Set initial NAA for each stock
-log_N1  <- rep(10, n_stocks) # Create difference between stocks
-N1_pars <- generate_ini_N1(log_N1,basic_info,ini.opt)
-
-NAA_re <- list(N1_model=rep(ini.opt,n_stocks),
-               sigma=rep(sigma,n_stocks),
-               cor=rep(re_cor,n_stocks),
-               recruit_model = 3,
-               recruit_pars = rep(list(c(alpha,beta)),n_stocks), # assume same B-H s-r functions for all stocks
-               sigma_vals = sigma_vals,
-               N1_pars = N1_pars)#,
-               #NAA_where = basic_info$NAA_where)
-
-# recruit_model = 1: estimating annual recruitments as fixed effects or a random walk if NAA_re$sigma specified
-# recruit_model = 2: estimating a mean recruitment with annual recruitments as random effects
-# recruit_model = 3: Beverton-Holt stock-recruitment with annual recruitments as random effects
-# recruit_model = 4: Ricker stock-recruitment with annual recruitments as random effects
-
-# 1. recruit_pars: a list (length = n_stocks) of vectors of initial parameters for recruitment model. 
-# If $recruit_model is 3 (B-H) or 4 (Ricker), parameters are "alpha" and "beta".
-
-# 2. sigma_vals: Initial standard deviation values to use for the NAA deviations. Values are not used if recruit_model = 1 
-# If sigma="rec": must be a list (length = n_stocks) of single values
-# If sigma="rec+1": a list (length = n_stocks) of 2 values must be specified. First is for the first age class (recruits), second is for all other ages.
-
-input <- prepare_wham_input(basic_info = basic_info, 
-                            selectivity = sel, 
-                            M = M, 
-                            NAA_re = NAA_re, 
-                            move = move,
-                            catch_info = catch_info, 
-                            index_info = index_info, 
-                            F = F_info)
-
-random = input$random # check what processes are random effects
-input$random = NULL # so inner optimization won't change simulated RE
-om <- fit_wham(input, do.fit = F, do.brps = T, MakeADFun.silent = TRUE)
-# Note: do.fit must be FALSE (no modeling fitting yet)
-
-om_with_data <- update_om_fn(om, seed = 123, random = random)
-
-assess.interval <- 3 # Note: assessment interval is 3 years, given the feedback period is 3 years, there will be only 1 assessment
-base.years      <- year_start:year_end # Burn-in period
-first.year      <- head(base.years,1)
-terminal.year   <- tail(base.years,1)
-assess.years    <- seq(terminal.year, tail(om$years,1)-assess.interval,by = assess.interval)
-
-mods <- list() # Create a list to save MSE outputs
-
-n_stocks = n_regions = n_fleets = n_indices = 1
-
-sel_em <- list(model=rep("logistic",n_fleets+n_indices),
-               initial_pars=c(rep(list(fleet_pars),n_fleets),rep(list(index_pars),n_indices)))
-
-NAA_re_em <- list(N1_model="equilibrium",sigma="rec+1",cor="iid")
-
-M_em <- list(model="constant",initial_means=array(0.2, dim = c(n_stocks,n_regions,n_ages)))
-
-mods[[1]] = loop_through_fn(om = om_with_data,
-                            em_info = info, 
-                            random = random,
-                            M_em = M_em, 
-                            sel_em = sel_em, 
-                            NAA_re_em = NAA_re_em, 
-                            move_em = NULL,
-                            age_comp_em = "multinomial",
-                            em.opt = list(separate.em = TRUE, separate.em.type = 1, 
-                                          do.move = FALSE, est.move = FALSE),
-                            # Please use this code:
-                            aggregate_catch_info = list(n_fleets = 1, 
-                                                        fleet_pointer = c(1,1), 
-                                                        use_catch_weighted_waa=TRUE, 
-                                                        catch_Neff = 100, 
-                                                        catch_cv = 0.1),
-                            # Please use this code:
-                            aggregate_index_info = list(n_indices = 1, 
-                                                        index_pointer = c(1,1), 
-                                                        use_catch_weighted_waa=TRUE, 
-                                                        index_Neff = 100, 
-                                                        index_cv = 0.1),
-                            assess_years = assess.years, 
-                            assess_interval = assess.interval, 
-                            base_years = base.years,
-                            year.use = 20, # number of years of data you want to use in the assessment model
-                            hcr = list(hcr.type = 1, hcr.opts = NULL), 
-                            seed = 123,
-                            save.sdrep = FALSE, 
-                            save.last.em = TRUE)
-
-mods[[1]]$om$rep$pred_catch # Check catch in the feedback loop
-mods[[1]]$om$rep$SSB  # Check SSB in the feedback loop
-```
-
-## Modify for long-lived, Cheng fixed and now runs
-
-Basic info for a long-lived species. Based on @wiedenmann_evaluation_2017, Table 3 B and C.
-
-A long-lived species recruits at 5 years, lives to 20, mean M is 0.1, matures at 7. 
+A short-lived species recruits at 1 year, lives to 7, mean M is 0.4, 50% mature at age 2 (1.75 in Wiedenmann). 
 
 Modify from https://lichengxue.github.io/whamMSE/03.Management-Strategy-Evaluation.html
 
-Start with a 20 year burn in and 20 MSE years. First try constant low F. Then work up to complex case.
+Start with a 30 year burn in and 30 MSE years. First try constant low F. Then work up to complex case.
 
-Fishing pattern is "constant" at first to get running
+Historical fishing pattern is "F-H-L".
+
+Setup the ideal baseline with assessments 2 years, both surveys, and "good" data.
 
 Now set up as in new Single Stock MSE vignette: https://lichengxue.github.io/whamMSE/11.Single-Stock-MSE.html
 
-These are run and outputs are in the html, so it will be loooonnnng
 
 ```{r}
 
 year_start  <- 1  # starting year in the burn-in period
-year_end    <- 20  # end year in the burn-in period
-MSE_years   <- 20     # number of years in the feedback loop
+year_end    <- 30  # end year in the burn-in period
+MSE_years   <- 10     # number of years in the feedback loop
 # Note: no need to include MSE_years in simulation-estimation 
 
-info <- generate_basic_info(n_stocks = 1, #2,
-                            n_regions = 1, #2,
-                            n_indices = 1, #2,
-                            n_fleets = 1, #2,
-                            n_seasons = 1, # don't need seasons
+info <- generate_basic_info(n_stocks = 1, 
+                            n_regions = 1,
+                            n_indices = 2,
+                            n_fleets = 1,
+                            n_seasons = 1,
                             base.years = year_start:year_end,
                             n_feedback_years = MSE_years,
-                            life_history = "long",
-                            n_ages = 20,
-                            # We want a bit higher F in the historical period
-                            F_info = list(F.year1 = 0.1, Fhist = "constant", Fmax = 0.1, Fmin = 0.1, change_time = 0.5, user_F = NULL),
+                            life_history = "short",
+                            n_ages = 7,
+                            F_info = list(F.year1 = 0.33, Fhist = "F-H-L", Fmax = 2.5, Fmin = 1, change_time = 0.5, user_F = NULL), #0.33 is approximately F40% based on Wiedenmann
                             catch_info = list(catch_cv = 0.1, catch_Neff = 100),
-                            index_info = list(index_cv = 0.1, index_Neff = 100, fracyr_indices = 0.625, q = 0.2),
-                            fracyr_spawn = 0.625) 
+                            index_info = list(index_cv = c(0.25,0.3), index_Neff = c(100,100), fracyr_indices = c(0.25,0.75), q = c(0.000001,0.000001),units_indices=2,units_index_paa=2),
+                            fracyr_spawn = 0.85) 
 
 basic_info = info$basic_info # collect basic information
 catch_info = info$catch_info # collect fleet catch information
@@ -240,7 +84,7 @@ move <- NULL
 #move <- generate_move(basic_info = basic_info, move.type = 2, move.rate = c(0.3), #,0.1
 #                     move.re = "iid_y", move.sigma = 0.5, prior.sigma = 0.5, use.prior = TRUE)
 ```
-Adjust for 1 area 1 stock, long lived M=0.1
+Adjust for 1 area 1 stock, short lived M=0.4
 
 ```{r}
 n_stocks  <- as.integer(basic_info['n_stocks'])
@@ -250,13 +94,13 @@ n_indices <- as.integer(basic_info['n_indices'])
 n_ages    <- as.integer(basic_info['n_ages'])
 
 # Selectivity Configuration
-fleet_pars <- c(5,1)
-index_pars <- c(2,1)
+fleet_pars <- c(3,1)
+index_pars1 = c(4,1)
+index_pars2 = c(3,2)
 sel <- list(model=rep("logistic",n_fleets+n_indices),
-            initial_pars=c(rep(list(fleet_pars),n_fleets),rep(list(index_pars),n_indices)))
-
+            initial_pars=c(rep(list(fleet_pars),n_fleets),list(index_pars1, index_pars2)))
 # M Configuration
-M <- list(model="constant",initial_means=array(0.1, dim = c(n_stocks,n_regions,n_ages)))
+M <- list(model="constant",initial_means=array(0.4, dim = c(n_stocks,n_regions,n_ages)))
 ```
 
 
@@ -266,23 +110,26 @@ sigma      <- "rec+1"
 re_cor     <- "iid"
 ini.opt    <- "equilibrium" # option   <- c("age-specific-fe", "equilibrium")
 
-# Set para. for B-H function
-alpha <- 12
-beta  <- 1.5e-4
+# Set para. mean rec
+#alpha <- 12
+#beta  <- 1.5e-4
+meanrec=2500000  #1*10^9
 
 # Set sigma for NAA
-NAA_sig <- 0.2
+NAA_sig <- 0.26
 sigma_vals = array(NAA_sig, dim = c(n_stocks, n_regions, n_ages)) # n_stocks x n_regions x n_ages"
+rec_sig=0.8
+sigma_vals[[1]]=rec_sig
 
 # Set initial NAA for each stock
-log_N1  <- rep(10, n_stocks) # Create difference between stocks
+log_N1  <- rep(log(meanrec/2), n_stocks) # Create difference between stocks
 N1_pars <- generate_ini_N1(log_N1,basic_info,ini.opt)
 
 NAA_re <- list(N1_model=rep(ini.opt,n_stocks),
                sigma=rep(sigma,n_stocks),
                cor=rep(re_cor,n_stocks),
-               recruit_model = 3,
-               recruit_pars = rep(list(c(alpha,beta)),n_stocks), # assume same B-H s-r functions for all stocks
+               recruit_model = 2,
+               recruit_pars = rep(list(c(meanrec)),n_stocks), # assume same constant s-r 
                sigma_vals = sigma_vals,
                N1_pars = N1_pars)#,
                #NAA_where = basic_info$NAA_where)
@@ -314,7 +161,7 @@ Make inputs for the OM
 
 # IMPORTANT!#
 # This appears to be due to the initial F value for the Newton iterations to find F40. The default value is too high for long-lived fish
-input$data$FXSPR_init[] <- 0.01 # change to a low value
+input$data$FXSPR_init[] <-0.3 # 0.01 # change to a low value
 
 ```
 
@@ -334,10 +181,10 @@ One dataset
 om_with_data <- update_om_fn(om, seed = 123, random = random)
 ```
 
-Assessment specifications, every 3 years as a start, MP could be annual
+Assessment specifications, every 2 years as a start, MP could be annual
 
 ```{r}
-assess.interval <- 3 # 
+assess.interval <- 2 # 
 base.years      <- year_start:year_end # Burn-in period
 first.year      <- head(base.years,1)
 terminal.year   <- tail(base.years,1)
@@ -378,7 +225,22 @@ mods[[1]] = loop_through_fn(om = om_with_data,
                             seed = 123,
                             save.sdrep = FALSE, 
                             save.last.em = TRUE,
-                            FXSPR_init = 0.01) # IMPORTANT!
+                            FXSPR_init = 0.3) # IMPORTANT!
+
+###try plotting this one
+#mods = list()
+
+#for (nsim in 1:10) {
+ # file.names <- file.path(sub.dir,paste0("Mod",1:6,sprintf("_%03d.RDS",nsim))) # path where you saved the results from Ex5.
+#  mods[[nsim]] <- lapply(file.names, readRDS)
+#}
+
+#plot_mse_output(mods = mods, main.dir = getwd(), dpi = 150,
+ #               use.n.years = 5, # The last 10 years will be used for comparison of long-term performance 
+  #              base.mod = 1, # "correct" EM that can be used as a reference
+   #             short.term = NULL, # if NULL, results of first 2 years will be used for comparison of short-term performance
+    #            out.type = "html") # Options: png, pdf, html 
+
 ```
 
 Try same model with poorer survey in the future
