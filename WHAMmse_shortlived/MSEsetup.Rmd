@@ -12,7 +12,7 @@ urlcolor: blue
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
 ```
 
 # Setup
@@ -96,7 +96,7 @@ n_ages    <- as.integer(basic_info['n_ages'])
 # Selectivity Configuration
 fleet_pars <- c(3,1)
 index_pars1 = c(4,1)
-index_pars2 = c(3,2)
+index_pars2 = c(3,0.5)
 sel <- list(model=rep("logistic",n_fleets+n_indices),
             initial_pars=c(rep(list(fleet_pars),n_fleets),list(index_pars1, index_pars2)))
 # M Configuration
@@ -122,8 +122,8 @@ rec_sig=0.8
 sigma_vals[[1]]=rec_sig
 
 # Set initial NAA for each stock
-log_N1  <- rep(log(meanrec/2), n_stocks) # Create difference between stocks
-N1_pars <- generate_ini_N1(log_N1,basic_info,ini.opt)
+# log_N1  <- rep(log(meanrec/2), n_stocks) # Create difference between stocks
+N1_pars <- generate_ini_N1(basic_info, ini.opt, log_N1 = log(meanrec/2), log_N1_F = 0.5)
 
 NAA_re <- list(N1_model=rep(ini.opt,n_stocks),
                sigma=rep(sigma,n_stocks),
@@ -286,7 +286,8 @@ mods[[2]] = loop_through_fn(om = om_with_data,
                             seed = 123,
                             save.sdrep = FALSE, 
                             save.last.em = TRUE,
-                            FXSPR_init = 0.01) # IMPORTANT!
+                            # Initial F should be much higher than 0.01 otherwise F brp can't be found 
+                            FXSPR_init = 0.3) # IMPORTANT!
 
 ```
 
@@ -299,19 +300,13 @@ This compares a good survey in the future (1) with a poor survey in the future (
 
 par(mfrow = c(1,2))
 SSB_s1 <- lapply(mods, function(mod) mod$om$rep$SSB[,1])
-plot(SSB_s1[[1]], type = "l", col = "blue", ylab = "SSB", xlab = "Year", ylim=c(0,100000), main = "OM SSB") 
-colors <- c("red","green","purple","orange")
-for (i in length(SSB_s1)) {
-  lines(SSB_s1[[i]], col = colors[i-1],lty = i)
-}
-legend("topleft",legend = paste0("EM ", 1:2), col = c("blue",colors),lty=1:5, cex=0.8)
+plot(SSB_s1[[1]], type = "l", col = "blue", ylab = "SSB", xlab = "Year", ylim=c(0,2000000), main = "OM SSB", lwd = 2) 
+lines(SSB_s1[[2]], col = "red",lty = 2, lwd = 2)
+legend("topleft",legend = paste0("EM ", 1:2), col = c("blue","red"),lty=1:2, cex=0.8)
 
 Catch_s1 <- lapply(mods, function(mod) mod$om$rep$pred_catch[,1])
-plot(Catch_s1[[1]], type = "l", col = "blue", ylab = "Catch", xlab = "Year", ylim=c(0,30000), main = "OM Catch")
-colors <- c("red","green","purple","orange")
-for (i in length(Catch_s1)) {
-  lines(Catch_s1[[i]], col = colors[i-1],lty = i)
-}
+plot(Catch_s1[[1]], type = "l", col = "blue", ylab = "Catch", xlab = "Year", ylim=c(0,1000000), main = "OM Catch", lwd = 2)
+lines(Catch_s1[[2]], col = "red",lty = 2, lwd = 2)
 
 ```
 Now add the one with no survey, from Cheng's code
@@ -364,7 +359,8 @@ mods[[3]] = loop_through_fn(om = om_with_data,
                             seed = 123,
                             save.sdrep = FALSE, 
                             save.last.em = TRUE,
-                            FXSPR_init = 0.01) # IMPORTANT!
+                            # Initial F should be much higher than 0.01 otherwise F brp can't be found 
+                            FXSPR_init = 0.1) # IMPORTANT!
 
 ```
 
@@ -374,16 +370,16 @@ Visualize 3 mods (modified from https://lichengxue.github.io/whamMSE/03.Manageme
 
 par(mfrow = c(1,2))
 SSB_s1 <- lapply(mods, function(mod) mod$om$rep$SSB[,1])
-plot(SSB_s1[[1]], type = "l", col = "blue", ylab = "SSB", xlab = "Year", ylim=c(1e4,130000), main = "OM SSB",, lwd = 2) 
-lines(SSB_s1[[2]], col = "red",lty = 1, lwd = 2)
-lines(SSB_s1[[3]], col = "orange",lty = 1, lwd = 2)
+plot(SSB_s1[[1]], type = "l", col = "blue", ylab = "SSB", xlab = "Year", ylim=c(2e4,3e6), main = "OM SSB", lwd = 2) 
+lines(SSB_s1[[2]], col = "red",lty = 2, lwd = 2)
+lines(SSB_s1[[3]], col = "orange",lty = 3, lwd = 2)
 
-legend("topleft",legend = c("EM1_good_survey", "EM2_poor_survey","EM3_missing_survey"), col = c("blue","red","orange"),lty=1, cex=0.8)
+legend("topleft",legend = c("EM1_good_survey", "EM2_poor_survey","EM3_missing_survey"), col = c("blue","red","orange"),lty=1:3, cex=0.8)
 
 Catch_s1 <- lapply(mods, function(mod) mod$om$rep$pred_catch[,1])
-plot(Catch_s1[[1]], type = "l", col = "blue", ylab = "Catch", xlab = "Year", ylim=c(0,15000), main = "OM Catch", lwd = 2)
-lines(Catch_s1[[2]], col = "red",lty = 1, lwd = 2)
-lines(Catch_s1[[3]], col = "orange",lty = 1, lwd = 2)
+plot(Catch_s1[[1]], type = "l", col = "blue", ylab = "Catch", xlab = "Year", ylim=c(0,1.5e6), main = "OM Catch", lwd = 2)
+lines(Catch_s1[[2]], col = "red",lty = 2, lwd = 2)
+lines(Catch_s1[[3]], col = "orange",lty = 3, lwd = 2)
 
 ```
 
