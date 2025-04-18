@@ -20,6 +20,8 @@ knitr::opts_chunk$set(echo = FALSE)
 Following the MSE vignette from Chengxue Li at https://lichengxue.github.io/whamMSE/
 
 ```{r}
+#devtools::install_github("lichengxue/whamMSE", dependencies=FALSE)
+devtools::install_github("timjmiller/wham", dependencies=TRUE)
 library(wham)
 library(whamMSE)
 library(fmsb)
