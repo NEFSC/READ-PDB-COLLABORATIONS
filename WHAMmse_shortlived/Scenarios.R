@@ -22,7 +22,7 @@ setwd(main.dir)
 
 year_start  <- 1  # starting year in the burn-in period
 year_end    <- 30  # end year in the burn-in period
-MSE_years   <- 30     # number of years in the feedback loop
+MSE_years   <- 32     # number of years in the feedback loop
 # Note: no need to include MSE_years in simulation-estimation 
 
 info <- generate_basic_info(n_stocks = 1, 
@@ -135,7 +135,7 @@ mods <- list() # Create a list to save MSE outputs
 
 ## Make directory
 
-sub.dir = "Baseline Results"
+sub.dir = "Baseline"
 dir.create(file.path(getwd(), sub.dir), recursive = TRUE)
 
 library(doParallel)
@@ -186,7 +186,7 @@ stopCluster(cluster)
 ###Baseline but assessment interval of 4 instead of 2
 ## Make directory
 
-sub.dir = "Baseline Long Interval"
+sub.dir = "Long Interval"
 dir.create(file.path(getwd(), sub.dir), recursive = TRUE)
 
 assess.interval <- 4 # 
@@ -238,13 +238,13 @@ stopCluster(cluster)
 #Baseline with degraded data; I tried alternating surveys but can't get it to work
 ## Make directory
 
-sub.dir = "Baseline Degraded"
+sub.dir = "Degraded"
 dir.create(file.path(getwd(), sub.dir), recursive = TRUE)
 
 agg_index_sigma = input$data$agg_index_sigma
-agg_index_sigma[31:60,] = 0.75 # Increase CV for both survey indices in the feedback period
+agg_index_sigma[31:62,] = 0.75 # Increase CV for both survey indices in the feedback period
 index_Neff = input$data$index_Neff
-index_Neff[31:60,] = 50 # Decrease ESS for both survey indices in the feedback period
+index_Neff[31:62,] = 50 # Decrease ESS for both survey indices in the feedback period
 
 #alternate years fall and spring surveys
 #remove_agg = TRUE # remove a aggregate index for some years
@@ -259,9 +259,9 @@ input <- update_input_index_info(input, agg_index_sigma, index_Neff) #,
                                  #remove_paa, remove_paa_pointer, remove_paa_years) # Update input file
 
 agg_catch_sigma = input$data$agg_catch_sigma
-agg_catch_sigma[31:60,] = 0.2 #double catch CV in the feedback period
+agg_catch_sigma[31:62,] = 0.2 #double catch CV in the feedback period
 catch_Neff = input$data$catch_Neff
-catch_Neff[31:60] = 50
+catch_Neff[31:62] = 50
 
 input <- update_input_catch_info(input, agg_catch_sigma, catch_Neff)
 
@@ -314,7 +314,7 @@ foreach (i = 1:100) %dopar% {
 stopCluster(cluster)
 
 # And degraded data with a 4 year assessment
-sub.dir = "Baseline Degraded Long Interval"
+sub.dir = "Degraded Long Interval"
 dir.create(file.path(getwd(), sub.dir), recursive = TRUE)
 
 assess.interval <- 4 # 
@@ -326,7 +326,7 @@ assess.years    <- seq(terminal.year, tail(om$years,1)-assess.interval,by = asse
 
 cluster <- makeCluster(n_cores-1) 
 registerDoParallel(cluster)
-
+#i=59
 foreach (i = 1:100) %dopar% {
   
   library(wham)
@@ -364,30 +364,30 @@ stopCluster(cluster)
 #Baseline with degraded data and alternating surveys
 ## Make directory
 
-sub.dir = "Baseline Degraded Alternating"
+sub.dir = "Degraded Alternating"
 dir.create(file.path(getwd(), sub.dir), recursive = TRUE)
 
 agg_index_sigma = input$data$agg_index_sigma
-agg_index_sigma[31:60,] = 0.75 # Increase CV for both survey indices in the feedback period
+agg_index_sigma[31:62,] = 0.75 # Increase CV for both survey indices in the feedback period
 index_Neff = input$data$index_Neff
-index_Neff[31:60,] = 50 # Decrease ESS for both survey indices in the feedback period
+index_Neff[31:62,] = 50 # Decrease ESS for both survey indices in the feedback period
 
 #alternate years fall and spring surveys
 remove_agg = TRUE # remove a aggregate index for some years
 remove_agg_pointer = c(1,2) # both
-remove_agg_years = matrix(data=c(seq(31,60,2), seq(32,60,2)), nrow=15, ncol=2)    #alternating years by survey
+remove_agg_years = matrix(data=c(seq(31,62,2), seq(32,62,2)), nrow=16, ncol=2)    #alternating years by survey
 remove_paa = TRUE #Also remove age comp for that index 
 remove_paa_pointer = c(1,2) # both
-remove_paa_years =  matrix(data=c(seq(31,60,2), seq(32,60,2)), nrow=15, ncol=2) #alternating years by survey
+remove_paa_years =  matrix(data=c(seq(31,62,2), seq(32,62,2)), nrow=16, ncol=2) #alternating years by survey
 
 input <- update_input_index_info(input, agg_index_sigma, index_Neff,
                                  remove_agg, remove_agg_pointer, remove_agg_years,
                                  remove_paa, remove_paa_pointer, remove_paa_years) # Update input file
 
 agg_catch_sigma = input$data$agg_catch_sigma
-agg_catch_sigma[31:60,] = 0.2 #double catch CV in the feedback period
+agg_catch_sigma[31:62,] = 0.2 #double catch CV in the feedback period
 catch_Neff = input$data$catch_Neff
-catch_Neff[31:60] = 50
+catch_Neff[31:62] = 50
 
 input <- update_input_catch_info(input, agg_catch_sigma, catch_Neff)
 
@@ -405,7 +405,7 @@ assess.years    <- seq(terminal.year, tail(om$years,1)-assess.interval,by = asse
 cluster <- makeCluster(n_cores-1) 
 registerDoParallel(cluster)
 
-foreach (i = 1:6) %dopar% {
+foreach (i = 1:100) %dopar% {
   
   library(wham)
   library(whamMSE)
@@ -424,6 +424,15 @@ foreach (i = 1:6) %dopar% {
                         # Here is the correct code: separate.em = FALSE also works for one-area model
                         em.opt = list(separate.em = FALSE, separate.em.type = 1, 
                                       do.move = FALSE, est.move = FALSE),
+                        # ------------------------------------------------------ #
+                        # - Below is needed when making changes on data quality- #
+                        # ------------------------------------------------------ #
+                        update_index_info  = list(agg_index_sigma = agg_index_sigma, index_Neff = index_Neff), # Must have this!
+                        update_catch_info  = list(agg_catch_sigma = agg_catch_sigma, catch_Neff = catch_Neff), # Must have this!
+                        # ------------------------------------------------------ #
+                        # - Above is needed when making changes on data quality- #
+                        # ------------------------------------------------------ #
+                        
                         assess_years = assess.years, 
                         assess_interval = assess.interval, 
                         base_years = base.years,
@@ -434,15 +443,102 @@ foreach (i = 1:6) %dopar% {
                         save.last.em = TRUE,
                         FXSPR_init = 0.3) # IMPORTANT!
   
-  saveRDS(mod, file.path(paste(getwd(),sub.dir,sep="/"),sprintf("Mod3_%03d.RDS",i)))
+  saveRDS(mod, file.path(paste(getwd(),sub.dir,sep="/"),sprintf("Mod5_%03d.RDS",i)))
   
 }
 stopCluster(cluster)
 
 
+#Baseline with degraded data, alternating surveys, and long interval
+## Make directory
+
+sub.dir = "Degraded Long Interval Alternating"
+dir.create(file.path(getwd(), sub.dir), recursive = TRUE)
+
+agg_index_sigma = input$data$agg_index_sigma
+agg_index_sigma[31:62,] = 0.75 # Increase CV for both survey indices in the feedback period
+index_Neff = input$data$index_Neff
+index_Neff[31:62,] = 50 # Decrease ESS for both survey indices in the feedback period
+
+#alternate years fall and spring surveys
+remove_agg = TRUE # remove a aggregate index for some years
+remove_agg_pointer = c(1,2) # both
+remove_agg_years = matrix(data=c(seq(31,62,2), seq(32,62,2)), nrow=16, ncol=2)    #alternating years by survey
+remove_paa = TRUE #Also remove age comp for that index 
+remove_paa_pointer = c(1,2) # both
+remove_paa_years =  matrix(data=c(seq(31,62,2), seq(32,62,2)), nrow=16, ncol=2) #alternating years by survey
+
+input <- update_input_index_info(input, agg_index_sigma, index_Neff,
+                                 remove_agg, remove_agg_pointer, remove_agg_years,
+                                 remove_paa, remove_paa_pointer, remove_paa_years) # Update input file
+
+agg_catch_sigma = input$data$agg_catch_sigma
+agg_catch_sigma[31:62,] = 0.2 #double catch CV in the feedback period
+catch_Neff = input$data$catch_Neff
+catch_Neff[31:62] = 50
+
+input <- update_input_catch_info(input, agg_catch_sigma, catch_Neff)
+
+om <- fit_wham(input, do.fit = F, do.brps = T, MakeADFun.silent = TRUE)
+
+# Run 2 year assessment frequency with degraded data and alternating surveys
+
+assess.interval <- 4 # 
+
+base.years      <- year_start:year_end # Burn-in period
+first.year      <- head(base.years,1)
+terminal.year   <- tail(base.years,1)
+assess.years    <- seq(terminal.year, tail(om$years,1)-assess.interval,by = assess.interval)
+
+cluster <- makeCluster(n_cores-1) 
+registerDoParallel(cluster)
+
+foreach (i = 1:100) %dopar% {
+  
+  library(wham)
+  library(whamMSE)
+  
+  om_with_data <- update_om_fn(om, seed = 123+i, random = random)
+  NAA_re_em <- list(N1_model="equilibrium",sigma="rec+1",cor="iid")
+  
+  mod = loop_through_fn(om = om_with_data,
+                        em_info = info, 
+                        random = random,
+                        M_em = M, # use OM M
+                        sel_em = sel, # use OM sel
+                        NAA_re_em = NAA_re_em, # use rec assumed random around the mean instead, help runtime (est B-H is difficult)
+                        move_em = NULL,
+                        age_comp_em = "multinomial",
+                        # Here is the correct code: separate.em = FALSE also works for one-area model
+                        em.opt = list(separate.em = FALSE, separate.em.type = 1, 
+                                      do.move = FALSE, est.move = FALSE),
+                        # ------------------------------------------------------ #
+                        # - Below is needed when making changes on data quality- #
+                        # ------------------------------------------------------ #
+                        update_index_info  = list(agg_index_sigma = agg_index_sigma, index_Neff = index_Neff), # Must have this!
+                        update_catch_info  = list(agg_catch_sigma = agg_catch_sigma, catch_Neff = catch_Neff), # Must have this!
+                        # ------------------------------------------------------ #
+                        # - Above is needed when making changes on data quality- #
+                        # ------------------------------------------------------ #
+                        
+                        assess_years = assess.years, 
+                        assess_interval = assess.interval, 
+                        base_years = base.years,
+                        year.use = 30, # number of years of data you want to use in the assessment model
+                        add.years = TRUE, # extends assessment time series instead of moving window of year.use years
+                        seed = 123+i,
+                        save.sdrep = FALSE, 
+                        save.last.em = TRUE,
+                        FXSPR_init = 0.3) # IMPORTANT!
+  
+  saveRDS(mod, file.path(paste(getwd(),sub.dir,sep="/"),sprintf("Mod6_%03d.RDS",i)))
+  
+}
+stopCluster(cluster)
+
 ###try plotting
 mods = list()
-sub.dir=c("Baseline Results","Baseline Long Interval","Baseline Degraded","Baseline Degraded Long Interval")
+sub.dir=c("Baseline","Long Interval","Degraded","Degraded Long Interval")
 #for(scen in 1:4){
 for (nsim in 1:10) {
   file.names <- file.path(paste0(sub.dir,"/","Mod",1:4,sprintf("_%03d.RDS",nsim))) # path where you saved the results
