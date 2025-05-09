@@ -156,7 +156,7 @@ cluster <- makeCluster(n_cores-1)
 registerDoParallel(cluster)
 
 # 
-foreach (i = 1:3) %dopar% {
+foreach (i = 1:100) %dopar% {
   
   library(wham)
   library(whamMSE)
@@ -208,7 +208,7 @@ cluster <- makeCluster(n_cores-1)
 registerDoParallel(cluster)
 
 
-foreach (i = 1:3) %dopar% {
+foreach (i = 1:100) %dopar% {
   
   library(wham)
   library(whamMSE)
@@ -286,7 +286,7 @@ assess.years    <- seq(terminal.year, tail(om$years,1)-assess.interval,by = asse
 cluster <- makeCluster(n_cores-1) 
 registerDoParallel(cluster)
 
-foreach (i = 1:3) %dopar% {
+foreach (i = 1:100) %dopar% {
   
   library(wham)
   library(whamMSE)
@@ -368,7 +368,7 @@ assess.years    <- seq(terminal.year, tail(om$years,1)-assess.interval,by = asse
 cluster <- makeCluster(n_cores-1) 
 registerDoParallel(cluster)
 #i=59
-foreach (i = 1:3) %dopar% {
+foreach (i = 1:100) %dopar% {
   
   library(wham)
   library(whamMSE)
@@ -454,7 +454,7 @@ assess.years    <- seq(terminal.year, tail(om$years,1)-assess.interval,by = asse
 cluster <- makeCluster(n_cores-1) 
 registerDoParallel(cluster)
 
-foreach (i = 1:3) %dopar% {
+foreach (i = 1:100) %dopar% {
   
   library(wham)
   library(whamMSE)
@@ -543,7 +543,7 @@ assess.years    <- seq(terminal.year, tail(om$years,1)-assess.interval,by = asse
 cluster <- makeCluster(n_cores-1) 
 registerDoParallel(cluster)
 
-foreach (i = 1:3) %dopar% {
+foreach (i = 1:100) %dopar% {
   
   library(wham)
   library(whamMSE)
