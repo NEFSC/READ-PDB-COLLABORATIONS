@@ -65,6 +65,7 @@ See README files within each folder for detailed descriptions of the files they 
 | Folder | Description |
 | ------ | ----------- |
 | Assessment FAQ | Contains tools and code to help answer FAQs about stock assessments and related topics | 
+| CAMS | Catch Accounting and Monitoring System related tips and tricks |
 | Reference points and projections | Contains functions to conduct P* projections for the MAFMC stocks and advanced reference point analysis |
 | Reports | Contains support functions to make management track assessment reports (e.g., those on the [stock assessment portal](https://apps-nefsc.fisheries.noaa.gov/saw/sasi.php) |
 | WHAM | Contains WHAM support functions and use examples that are not yet integrated into the WHAM R package, you may also consider [submitting well-tested functions to WHAM directly.](https://github.com/timjmiller/wham/blob/80b2b727fb62e09fb880267fcc648cbdb3a16882/.github/CONTRIBUTING.md) |
