@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Chris Legault">
-<meta name="dcterms.date" content="2025-05-27">
+<meta name="dcterms.date" content="2025-06-03">
 
 <title>CAMS discard tripping hazard</title>
 <style>
@@ -3103,7 +3103,7 @@ vertical-align: -.125em;
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">May 27, 2025</p>
+      <p class="date">June 3, 2025</p>
     </div>
   </div>
   
@@ -3117,16 +3117,16 @@ vertical-align: -.125em;
 
 <section id="bluf" class="level2">
 <h2 class="anchored" data-anchor-id="bluf">BLUF</h2>
-<p>Summarizing CAMS discards from CAMS_DISCARD_ALL_YEARS using variables in CAMS_DISCARD_STRATA can lead to inadvertent loss of discards due to the observed trips having a null strata_used_desc value.</p>
+<p>Do not link CAMS_DISCARD_STRATA to CAMS_DISCARD_ALL_YEARS when summarizing CAMS discards due to null strata_used_desc values. Instead build up the desired summation variables in a join, then summarize.</p>
 </section>
 <section id="details" class="level2">
 <h2 class="anchored" data-anchor-id="details">Details</h2>
-<p>CAMS 2.0 reduced the size of CAMS_DISCARD_ALL_YEARS by removing a number of columns and creating a new table called CAMS_DISCARD_STRATA to serve as a look up table to decipher the strata_used_desc column. The strata_used_desc column is the primary key linking the CAMS_DISCARD_ALL_YEARS and CAMS_DISCARD_STRATA tables. However, the null values for observed trips means that the additional information from CAMS_DISCARD_STRATA cannot be used and the information must be found another way.</p>
+<p>CAMS 2.0 reduced the size of CAMS_DISCARD_ALL_YEARS by removing a number of columns and creating a new table called CAMS_DISCARD_STRATA to serve as a look up table to decipher the strata_used_desc column. The strata_used_desc column is described as the primary key linking the CAMS_DISCARD_ALL_YEARS and CAMS_DISCARD_STRATA tables. However, the null values for observed trips means that the additional information from CAMS_DISCARD_STRATA cannot be used and the information must be found another way.</p>
 <p>This problem can be seen in the “Simple Black Sea Bass example - bad” code and results shown below. Joining CAMS_DISCARD_ALL_YEARS and CAMS_DISCARD_STRATA using strata_used_desc when grouping by species_stock and discard_source results in the expected values for the North and South groups of black sea bass and discard_sources of G, GM, I, and T, but the observed trips (discard_source = ‘O’) do not get assigned to either the North or South group, instead they appear as a null group. While this is not a large portion of the total discards, it could be a problem if this approach was used to determine the North and South discards and the null area was ignored.</p>
-<p>One way to address this problem can be seen in the “Simple Black Sea Bass example - good” code and results shown below. The strategy is to separately calculated discards for discard_source = ‘O’ using other tables to define the required species_stock. In this case, cams_subtrip is used to identify the area where the subtrip occurred and cams_cfg_statarea_stock is used to assign the area for each subtrip to a species_stock. The results of this portion of the code are then combined with the standard approach that is applied to all discard sources other than observed using the UNION function (similar to rbind in R). The UNION function requires the columns of the two tables being joined to have the same names and types, just like rbind in R. The results for this approach now show all the Black Sea Bass discards correctly assigned to the North and South area by discard source.</p>
+<p>One way to address this problem can be seen in the “Simple Black Sea Bass example - good” code and results shown below. The strategy is to create a subset of subtrips from CAMS_DISCARD_ALL_YEARS by joining to a number of configuration files and selecting variables of interest. In this case, cams_subtrip is used to identify the area where the subtrip occurred and cams_cfg_statarea_stock is used to assign the area for each subtrip to a species_stock. The results of this portion of the code are then treated as a dataset on which to derive the desired sums. The results for this approach now show all the Black Sea Bass discards correctly assigned to the North and South area by discard source.</p>
 <p>In the simple example, the incorrect assignment was easy to notice due to the small number of records returned by the bad code. The null values will not always be as easily noticed when a more detailed breakdown is requested. Special thanks to Emily Liljestrand for bringing this problem to my attention and leading to this document.</p>
 <p>The “Complex Black Sea Bass example - bad” provides a demonstration of how challenging it can be to even notice that the null values are present due to the large number of records returned. In this example, the Black Sea Bass discards are desired by species_stock, cams_gear_group, and month. Ignoring the lack of ability to match on the null records for discard_source = ‘O’ results in 366 records with 92.4 metric tons of discards in species_stock = null. If this relatively large number of records was not closely examined, the null area discards could easily be missed. Similarly, if only one of the areas was desired as the result, say the North area, in the call, then the null areas would not be included and the discard values would be incorrect. Note that even though discard_source is not one of the desired breakdowns, the inability to match discard_source = ‘O’ still causes a problem. There are 92.4 mt of discards with null area and null cams_gear_group due to the matching process. Since month is extracted from the date_trip found in the CAMS_DISCARD_ALL_YEARS, it can be summed correctly because even the discard_source = ‘O’ records in this table have the date_trip so no joining to CAMS_DISCARD_STRATA is needed for this variable.</p>
-<p>The approach to solve the problem is the same, but the SQL code needs to be a bit more complex because multiple tables are now needed to derive the desired outputs, as seen in the “Complex Black Sea Bass example - good” code below. Grabbing the results of both the good and bad examples and summing the discard mt demonstrates that the totals for both approaches are the same, it is just that the observed trips are correctly apportioned in the good example. This complex example also demonstrates the ability to convert discard pounds to metric tons and estimate the coefficient of variance of the discards. These additional steps are nice to have and demonstrate that SQL code can be built slowly one step at a time to result in complex results, but that checking should always be done on results to ensure that records are not lost and that Cartesian products are not formed.</p>
+<p>The approach to solve the problem is the same, with the only changes in the bottom portion of the code where the sums are made, as seen in the “Complex Black Sea Bass example - good” code below. Grabbing the results of both the good and bad examples and summing the discard mt demonstrates that the totals for both approaches are the same, it is just that the observed trips are correctly apportioned in the good example. This complex example also demonstrates the ability to convert discard pounds to metric tons and estimate the coefficient of variance of the discards. These additional steps are nice to have and demonstrate that SQL code can be built slowly one step at a time to result in complex results, but that checking should always be done on results to ensure that records are not lost and that Cartesian products are not formed.</p>
 </section>
 <section id="simple-black-sea-bass-example---bad" class="level2">
 <h2 class="anchored" data-anchor-id="simple-black-sea-bass-example---bad">Simple Black Sea Bass example - bad</h2>
@@ -3143,66 +3143,61 @@ vertical-align: -.125em;
 <span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  <span class="kw">group</span> <span class="kw">by</span> a.itis_tsn, a.<span class="dt">year</span>, b.species_stock, a.discard_source</span>
 <span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="kw">order</span> <span class="kw">by</span> a.<span class="dt">year</span>, b.species_stock, a.discard_source;</span>
 <span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co">/*</span></span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    NORTH   G   193207.9</span></span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    NORTH   GM  52159.46</span></span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    NORTH   I   2037872.39</span></span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    NORTH   T   1.34</span></span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    SOUTH   G   7208.62</span></span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    SOUTH   GM  165260.25</span></span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    SOUTH   I   73731.52</span></span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    SOUTH   T   2054.49</span></span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    (null)  O   130914.58</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    NORTH   G    192503.44</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    NORTH   GM    46875.79</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    NORTH   I   2041406.77</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    NORTH   T         1.34</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    SOUTH   G      7143.41</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    SOUTH   GM   168252.58</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    SOUTH   I     73974.88</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    SOUTH   T      2055.94</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    (null)  O    130914.58</span></span>
 <span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="co">*/</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 <section id="simple-black-sea-bass-example---good" class="level2">
 <h2 class="anchored" data-anchor-id="simple-black-sea-bass-example---good">Simple Black Sea Bass example - good</h2>
-<div class="sourceCode" id="cb2"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">with</span> dso <span class="kw">as</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>(<span class="kw">select</span> a.camsid, a.subtrip, a.itis_tsn, a.<span class="dt">year</span>, a.discard_source, b.area, c.area_name <span class="kw">as</span> species_stock, a.cams_discard </span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a> <span class="kw">from</span> cams_discard_all_years a</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a> <span class="kw">left</span> <span class="kw">join</span> cams_subtrip b</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a> <span class="kw">on</span> a.camsid <span class="op">=</span> b.camsid <span class="kw">and</span> a.subtrip<span class="op">=</span>b.subtrip</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a> <span class="kw">left</span> <span class="kw">join</span> cams_cfg_statarea_stock c</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a> <span class="kw">on</span> b.area <span class="op">=</span> c.area <span class="kw">and</span> a.itis_tsn <span class="op">=</span> c.itis_tsn</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="kw">where</span> a.itis_tsn <span class="op">=</span> <span class="st">&#39;167687&#39;</span> </span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  <span class="kw">and</span> a.<span class="dt">year</span> <span class="op">=</span> <span class="dv">2024</span> </span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  <span class="kw">and</span> a.discard_source <span class="op">=</span> <span class="st">&#39;O&#39;</span>)</span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  <span class="kw">select</span> itis_tsn</span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  , <span class="dt">year</span></span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  , species_stock</span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>  , discard_source</span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>  , <span class="fu">sum</span>(cams_discard) <span class="kw">as</span> discard_lb</span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>  <span class="kw">from</span> dso</span>
-<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>  <span class="kw">group</span> <span class="kw">by</span> itis_tsn, <span class="dt">year</span>, species_stock, discard_source</span>
-<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="kw">union</span></span>
-<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="kw">select</span> a.itis_tsn</span>
-<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>  , a.<span class="dt">year</span></span>
-<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>  , b.species_stock</span>
-<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>  , a.discard_source</span>
-<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>  , <span class="fu">sum</span>(a.cams_discard) <span class="kw">as</span> discard_lb</span>
-<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>  <span class="kw">from</span> cams_discard_all_years a</span>
-<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>  <span class="kw">left</span> <span class="kw">join</span> cams_discard_strata b</span>
-<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>  <span class="kw">on</span> a.strata_used_desc <span class="op">=</span> b.strata_used_desc</span>
-<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>  <span class="kw">where</span> a.itis_tsn <span class="op">=</span> <span class="st">&#39;167687&#39;</span> </span>
-<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>  <span class="kw">and</span> a.<span class="dt">year</span> <span class="op">=</span> <span class="dv">2024</span> </span>
-<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>  <span class="kw">and</span> a.discard_source <span class="op">&lt;&gt;</span> <span class="st">&#39;O&#39;</span></span>
-<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>  <span class="kw">group</span> <span class="kw">by</span> a.itis_tsn, a.<span class="dt">year</span>, b.species_stock, a.discard_source</span>
-<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>  <span class="kw">order</span> <span class="kw">by</span> <span class="dt">year</span>, species_stock, discard_source;</span>
-<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a><span class="co">-- success!</span></span>
-<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a><span class="co">/*</span></span>
-<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    NORTH   G   193207.9</span></span>
-<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    NORTH   GM  52159.46</span></span>
-<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    NORTH   I   2037872.39</span></span>
-<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    NORTH   O   126550.42</span></span>
-<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    NORTH   T   1.34</span></span>
-<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    SOUTH   G   7208.62</span></span>
-<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    SOUTH   GM  165260.25</span></span>
-<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    SOUTH   I   73731.52</span></span>
-<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    SOUTH   O   4364.16</span></span>
-<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    SOUTH   T   2054.49</span></span>
-<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a><span class="co">*/</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">with</span> joins <span class="kw">as</span> (</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">select</span> y.<span class="op">*</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    , s.area</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    , a.area_type</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    , a.area_name <span class="kw">as</span> species_stock</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    , e.cams_gear_group</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">from</span> cams_discard_all_years y</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">left</span> <span class="kw">join</span> cams_garfo.cams_subtrip s</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">on</span> (y.camsid <span class="op">=</span> s.camsid <span class="kw">and</span> y.subtrip <span class="op">=</span> s.subtrip)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">left</span> <span class="kw">join</span> cams_garfo.cfg_statarea_stock a</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">on</span> (s.area <span class="op">=</span> a.area <span class="kw">and</span> y.itis_tsn <span class="op">=</span> a.itis_tsn) </span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>     <span class="kw">left</span> <span class="kw">join</span> cams_garfo.cfg_negear d</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">on</span> s.negear <span class="op">=</span> d.negear</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>     <span class="kw">left</span> <span class="kw">join</span> cams_garfo.cfg_gearcode_strata e</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">on</span> (y.itis_tsn <span class="op">=</span> e.itis_tsn <span class="kw">and</span> d.secgear_mapped <span class="op">=</span> e.secgear_mapped)</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">where</span> y.itis_tsn <span class="op">=</span> <span class="st">&#39;167687&#39;</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    <span class="kw">and</span> y.<span class="dt">year</span> <span class="op">=</span> <span class="dv">2024</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="kw">select</span> itis_tsn</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>  , <span class="dt">year</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>  , species_stock</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>  , discard_source</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>  , <span class="fu">sum</span>(cams_discard) <span class="kw">as</span> discard_lb</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="kw">from</span> joins</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a><span class="kw">group</span> <span class="kw">by</span> itis_tsn</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>  , <span class="dt">year</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>  , species_stock</span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>  , discard_source</span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="kw">order</span> <span class="kw">by</span> species_stock, discard_source;</span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a><span class="co">/*</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    NORTH   G    192503.44</span></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    NORTH   GM    46875.79</span></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    NORTH   I   2041406.77</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    NORTH   O    126550.42</span></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    NORTH   T         1.34</span></span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    SOUTH   G      7143.41</span></span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    SOUTH   GM   168252.58</span></span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    SOUTH   I     73974.88</span></span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    SOUTH   O      4364.16</span></span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a><span class="co">167687  2024    SOUTH   T      2055.94</span></span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a><span class="co">*/</span> </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 <section id="complex-black-sea-bass-example---bad" class="level2">
 <h2 class="anchored" data-anchor-id="complex-black-sea-bass-example---bad">Complex Black Sea Bass example - bad</h2>
@@ -3229,62 +3224,44 @@ vertical-align: -.125em;
 </section>
 <section id="complex-black-sea-bass-example---good" class="level2">
 <h2 class="anchored" data-anchor-id="complex-black-sea-bass-example---good">Complex Black Sea Bass example - good</h2>
-<div class="sourceCode" id="cb4"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">with</span> dso <span class="kw">as</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>(<span class="kw">select</span> a.camsid, a.subtrip, a.itis_tsn, a.<span class="dt">year</span>, a.discard_source, b.area, c.area_name <span class="kw">as</span> species_stock, </span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>        b.negear, d.secgear_mapped, e.cams_gear_group, <span class="fu">extract</span>(<span class="dt">month</span> <span class="kw">from</span> a.date_trip) <span class="kw">as</span> <span class="dt">month</span>, </span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>        a.cams_discard, a.cams_discard_variance, a.subtrip_kall </span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a> <span class="kw">from</span> cams_discard_all_years a</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a> <span class="kw">left</span> <span class="kw">join</span> cams_subtrip b</span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a> <span class="kw">on</span> a.camsid <span class="op">=</span> b.camsid <span class="kw">and</span> a.subtrip<span class="op">=</span>b.subtrip</span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a> <span class="kw">left</span> <span class="kw">join</span> cams_cfg_statarea_stock c</span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a> <span class="kw">on</span> b.area <span class="op">=</span> c.area <span class="kw">and</span> a.itis_tsn <span class="op">=</span> c.itis_tsn</span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a> <span class="kw">left</span> <span class="kw">join</span> cams_cfg_negear d</span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a> <span class="kw">on</span> b.negear <span class="op">=</span> d.negear</span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a> <span class="kw">left</span> <span class="kw">join</span> cams_cfg_gearcode_strata e</span>
-<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a> <span class="kw">on</span> a.itis_tsn <span class="op">=</span> e.itis_tsn <span class="kw">and</span> d.secgear_mapped <span class="op">=</span> e.secgear_mapped</span>
-<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a> </span>
-<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>  <span class="kw">where</span> a.itis_tsn <span class="op">=</span> <span class="st">&#39;167687&#39;</span> </span>
-<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>  <span class="kw">and</span> a.<span class="dt">year</span> <span class="op">=</span> <span class="dv">2019</span></span>
-<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>  <span class="kw">and</span> a.discard_source <span class="op">=</span> <span class="st">&#39;O&#39;</span>)</span>
-<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>  <span class="kw">select</span> itis_tsn</span>
-<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>  , <span class="dt">year</span></span>
-<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>  , species_stock</span>
-<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>  , cams_gear_group</span>
-<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>  , <span class="dt">month</span></span>
-<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>  , <span class="fu">sum</span>(cams_discard) <span class="kw">as</span> discard_lb</span>
-<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>  , <span class="fu">sum</span>(cams_discard_variance) variance_lb</span>
-<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>  , <span class="fu">sum</span>(subtrip_kall) kall_lb </span>
-<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>  , <span class="fu">count</span>(<span class="op">*</span>) <span class="kw">as</span> n</span>
-<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>  , <span class="fu">round</span>(<span class="fu">sum</span>(cams_discard)<span class="op">*</span><span class="fl">0.000453592370</span>, <span class="dv">1</span>) <span class="kw">as</span> discard_mt</span>
-<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>  , <span class="cf">case</span> <span class="cf">when</span> <span class="fu">sum</span>(cams_discard) <span class="op">=</span> <span class="dv">0</span> <span class="cf">then</span> <span class="dv">0</span></span>
-<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>     <span class="cf">else</span> <span class="fu">round</span>(<span class="fu">sqrt</span>(<span class="fu">sum</span>(cams_discard_variance))<span class="op">/</span><span class="fu">sum</span>(cams_discard), <span class="dv">4</span>) <span class="cf">end</span> <span class="kw">as</span> discard_cv</span>
-<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>  <span class="kw">from</span> dso</span>
-<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>  <span class="kw">group</span> <span class="kw">by</span> itis_tsn, <span class="dt">year</span>, species_stock, cams_gear_group, <span class="dt">month</span></span>
-<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a><span class="kw">union</span></span>
-<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a><span class="kw">select</span> a.itis_tsn</span>
-<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>  , a.<span class="dt">year</span></span>
-<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a>  , b.species_stock</span>
-<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a>  , b.cams_gear_group</span>
-<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a>  , <span class="fu">extract</span>(<span class="dt">month</span> <span class="kw">from</span> a.date_trip) <span class="kw">as</span> <span class="dt">month</span></span>
-<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>  , <span class="fu">sum</span>(a.cams_discard) discard_lb</span>
-<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a>  , <span class="fu">sum</span>(a.cams_discard_variance) variance_lb</span>
-<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a>  , <span class="fu">sum</span>(a.subtrip_kall) kall_lb </span>
-<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a>  , <span class="fu">count</span>(<span class="op">*</span>) <span class="kw">as</span> n</span>
-<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a>  , <span class="fu">round</span>(<span class="fu">sum</span>(a.cams_discard)<span class="op">*</span><span class="fl">0.000453592370</span>, <span class="dv">1</span>) <span class="kw">as</span> discard_mt</span>
-<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a>  , <span class="cf">case</span> <span class="cf">when</span> <span class="fu">sum</span>(a.cams_discard) <span class="op">=</span> <span class="dv">0</span> <span class="cf">then</span> <span class="dv">0</span></span>
-<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a>     <span class="cf">else</span> <span class="fu">round</span>(<span class="fu">sqrt</span>(<span class="fu">sum</span>(a.cams_discard_variance))<span class="op">/</span><span class="fu">sum</span>(a.cams_discard), <span class="dv">4</span>) <span class="cf">end</span> <span class="kw">as</span> discard_cv</span>
-<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a><span class="kw">from</span> cams_discard_all_years a</span>
-<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a><span class="kw">left</span> <span class="kw">join</span> cams_discard_strata b</span>
-<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a><span class="kw">on</span> a.strata_used_desc <span class="op">=</span> b.strata_used_desc</span>
-<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a> <span class="kw">where</span> a.itis_tsn<span class="op">=</span><span class="st">&#39;167687&#39;</span> </span>
-<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a> <span class="kw">and</span> a.<span class="dt">year</span> <span class="op">=</span> <span class="dv">2019</span></span>
-<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a> <span class="kw">and</span> a.discard_source <span class="op">&lt;&gt;</span> <span class="st">&#39;O&#39;</span></span>
-<span id="cb4-53"><a href="#cb4-53" aria-hidden="true" tabindex="-1"></a> <span class="kw">group</span> <span class="kw">by</span> a.itis_tsn, a.<span class="dt">year</span>, b.species_stock, b.cams_gear_group, <span class="fu">extract</span>(<span class="dt">month</span> <span class="kw">from</span> a.date_trip)</span>
-<span id="cb4-54"><a href="#cb4-54" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-55"><a href="#cb4-55" aria-hidden="true" tabindex="-1"></a> <span class="kw">order</span> <span class="kw">by</span> species_stock, discard_mt <span class="kw">desc</span>;</span>
-<span id="cb4-56"><a href="#cb4-56" aria-hidden="true" tabindex="-1"></a> <span class="co">-- 552 records with no species_stock = null or cams_gear_group = null results</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">with</span> joins <span class="kw">as</span> (</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">select</span> y.<span class="op">*</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    , s.area</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    , a.area_type</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    , a.area_name <span class="kw">as</span> species_stock</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    , e.cams_gear_group</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="kw">from</span> cams_discard_all_years y</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">left</span> <span class="kw">join</span> cams_garfo.cams_subtrip s</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">on</span> (y.camsid <span class="op">=</span> s.camsid <span class="kw">and</span> y.subtrip <span class="op">=</span> s.subtrip)</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">left</span> <span class="kw">join</span> cams_garfo.cfg_statarea_stock a</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">on</span> (s.area <span class="op">=</span> a.area <span class="kw">and</span> y.itis_tsn <span class="op">=</span> a.itis_tsn) </span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>     <span class="kw">left</span> <span class="kw">join</span> cams_garfo.cfg_negear d</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">on</span> s.negear <span class="op">=</span> d.negear</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>     <span class="kw">left</span> <span class="kw">join</span> cams_garfo.cfg_gearcode_strata e</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>    <span class="kw">on</span> (y.itis_tsn <span class="op">=</span> e.itis_tsn <span class="kw">and</span> d.secgear_mapped <span class="op">=</span> e.secgear_mapped)</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">where</span> y.itis_tsn <span class="op">=</span> <span class="st">&#39;167687&#39;</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>    <span class="kw">and</span> y.<span class="dt">year</span> <span class="op">=</span> <span class="dv">2019</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="kw">select</span> itis_tsn</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>  , <span class="dt">year</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>  , species_stock</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>  , cams_gear_group</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>  , <span class="fu">extract</span>(<span class="dt">month</span> <span class="kw">from</span> date_trip) <span class="kw">as</span> <span class="dt">month</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>  , <span class="fu">sum</span>(cams_discard) <span class="kw">as</span> discard_lb</span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>  , <span class="fu">sum</span>(cams_discard_variance) variance_lb</span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>  , <span class="fu">sum</span>(subtrip_kall) kall_lb </span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>  , <span class="fu">count</span>(<span class="op">*</span>) <span class="kw">as</span> n</span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>  , <span class="fu">round</span>(<span class="fu">sum</span>(cams_discard)<span class="op">*</span><span class="fl">0.000453592370</span>, <span class="dv">1</span>) <span class="kw">as</span> discard_mt</span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>  , <span class="cf">case</span> <span class="cf">when</span> <span class="fu">sum</span>(cams_discard) <span class="op">=</span> <span class="dv">0</span> <span class="cf">then</span> <span class="dv">0</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>     <span class="cf">else</span> <span class="fu">round</span>(<span class="fu">sqrt</span>(<span class="fu">sum</span>(cams_discard_variance))<span class="op">/</span><span class="fu">sum</span>(cams_discard), <span class="dv">4</span>) <span class="cf">end</span> <span class="kw">as</span> discard_cv</span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a><span class="kw">from</span> joins</span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a><span class="kw">group</span> <span class="kw">by</span> itis_tsn</span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>  , <span class="dt">year</span></span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a>  , species_stock</span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a>  , cams_gear_group</span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>  , <span class="fu">extract</span>(<span class="dt">month</span> <span class="kw">from</span> date_trip)</span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a><span class="kw">order</span> <span class="kw">by</span> species_stock, discard_mt <span class="kw">desc</span>;</span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a><span class="co">-- 359 records with no null species_stock </span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 
 </main>
