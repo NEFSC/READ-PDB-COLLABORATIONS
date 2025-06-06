@@ -1,0 +1,118 @@
+---
+title: "Does expanding a stratified mean change the CV?"
+author: Charles Perretti and Chris Legault
+date: today
+date-format: long
+format: 
+  html:
+    page-layout: full
+    embed-resources: true  
+---
+
+### BLUF: No, the CV does not change.
+
+### Background
+
+When working with surveys, we often have an annual index that is a stratified mean in per tow units. We sometimes want to calculate the "expanded" index, which expands the mean from per tow to per area, where area is often the total area of the survey. Perhaps you have wondered whether the CV of the per tow index is the same as the CV of the expanded index. If so, read on.
+
+### Simulation
+
+Consider a simple survey: three strata, each with different areas, and each with a different number of tows.
+
+```{r, message = FALSE}
+library(dplyr)
+
+samps_in_stratum <- c(4, 3, 6)
+area_of_stratum  <- c(600, 100, 1200)
+total_area       <- sum(area_of_stratum)
+
+dat <- data.frame(stratum      = rep(1:length(samps_in_stratum), times = samps_in_stratum),
+                  stratum_area = rep(area_of_stratum, times = samps_in_stratum),
+                  kg_tow       = runif(sum(samps_in_stratum), min = 1, max = 20)) %>%
+  mutate(stratum_weight = stratum_area/total_area)
+
+```
+
+Next we calculate the total abundance in four different ways, and see if they all end up with the same CV and total.
+
+#### Method 1 & 2: Expand at the end
+
+Calculate the mean of the tows in each stratum, then take a weighted sum over strata, then multiply by the total area. This is how the expansion is most commonly done. We show two different ways of weighting the strata, although they give the same result.
+
+```{r, message = FALSE}
+expand_end <- 
+  dat %>% 
+  group_by(stratum, stratum_weight, stratum_area) %>% 
+  summarise(mean_strat = mean(kg_tow),
+            var_strat  = var(kg_tow),
+            cv_strat = sqrt(var_strat) / mean_strat) %>%
+  ungroup() %>%
+  summarise(mean = sum(stratum_weight * mean_strat), 
+            var  = sum(stratum_weight^2 * var_strat), 
+            mean_a = sum(stratum_area * mean_strat) / total_area, 
+            var_a = sum(stratum_area^2 * var_strat) / (total_area^2) 
+            ) %>%
+  mutate(total = mean  * total_area,
+         total_a = mean_a * total_area,
+         cv = sqrt(var)/mean,
+         cv_a = sqrt(var_a)/mean_a)
+
+```
+
+#### Method 3: Expand in the middle
+
+Calculate the mean of the tows in each stratum, multiply by stratum area, then sum.
+
+```{r, message = FALSE}
+expand_middle <-
+  dat %>%
+  group_by(stratum, stratum_weight) %>% 
+  summarise(total_strata = unique(stratum_area) * mean(kg_tow),
+            var_strata  = (unique(stratum_area))^2 * var(kg_tow),
+            cv_strata = sqrt(var_strata) / total_strata,
+            cv_strata_weight = cv_strata * mean(stratum_weight)) %>%
+  ungroup() %>%
+  summarise(total = sum(total_strata),
+            var  = sum(var_strata)) %>%
+  mutate(cv = sqrt(var)/total)
+
+```
+
+#### Method 4: Expand at the start
+
+Multiple the per tow observation by the stratum area, then calculate the mean in each stratum, then sum.
+
+```{r, message = FALSE}
+expand_start <-
+  dat %>%
+  mutate(kg_stratarea = kg_tow * stratum_area) %>%
+  group_by(stratum, stratum_weight) %>% 
+  summarise(total_strata   = mean(kg_stratarea),
+            var_strata     = var(kg_stratarea)) %>%
+  ungroup() %>%
+  summarise(total = sum(total_strata),
+            var  = sum(var_strata)) %>%
+  mutate(cv = sqrt(var)/total)
+
+```
+
+Last, let's check if that they all give the same total:
+
+```{r, message = FALSE}
+print(c(expand_end$total, expand_end$total_a, expand_middle$total, expand_start$total))
+
+```
+
+And that they all give the same CV:
+
+```{r, message = FALSE}
+print(c(expand_end$cv, expand_end$cv_a, expand_middle$cv, expand_start$cv))
+
+```
+
+So there you have it. Four ways to convert a per tow index to an expanded index, and all ways give you the same total and CV.
+
+### Why it works
+
+From math classes long ago, var(cX) = (c^2) var(X) for any constant c and random variable X. A common mistake is to forget to square the constant term when converting units, say pounds to metric tons.
+
