@@ -10,4 +10,4 @@ This sub-directory contains specialty functions and using fitted models from the
 | pstarcalc.R | Calculates Pstar from B/BMSY ratio, supports "P-star.basic" codes | Chuck Adams and Mike Wilberg |
 | invabccalc.R | Calculates Pstar value from OFL, ABC, and OFL CV, supports "P-star.basic" codes | Chuck Adams and Mike Wilberg |
 | FX_SSBX_Calculation_Series.FIXED.R | Calculate the FX% for a specified number of years from any WHAM output | Cameron Hodgdon |
-
+| ChangePoint.R | Estimate the location(s) of breakpoint(s) for an environmental covariate time series | Cameron Hodgdon |
