@@ -7,16 +7,18 @@ Our goal is to build a community of practice around sharing code and tools to ma
 
 - Consider contributing a function or code example (code you've shared more than once over email is a good candidate), see our contribution guidelines to get started. Reach out to one of the formal repository collaborators if you don't see a sub-directory pertinent to your function or example.
 - Adapt one of the code examples for your own application.
-- Use functions contained in this repository by 1) installing the R package for this repository (easiest option, instructions below), 2) cloning or forking a copy of the repository to your local machine and load the function by sourcing the corresponding .R file (recommended approach) or 3) download a copy of the .R file containing the function to your local machine and source.
+- Use functions contained in this repository by 1) installing the pdbCollaborations R package for this repository (easiest option, instructions below), 2) cloning or forking a copy of the repository to your local machine and load the function by sourcing the corresponding .R file (recommended approach) or 3) download a copy of the .R file containing the function to your local machine and source.
 
 ## Installation
-Install the latest version of the R package version of this repository:
+Install the latest version of the pdbCollaborations R package version of this repository:
 ```
 devtools::install_github("NEFSC/READ-PDB-COLLABORATIONS", dependencies = TRUE)
+# library(pdbCollaborations)
 ```
 or
 ```
 pak::pkg_install("NEFSC/READ-PDB-COLLABORATIONS")
+# library(pdbCollaborations)
 ```
 
 A few notes for repository/package contributors:
