@@ -73,7 +73,7 @@
 #' 
 
 
-libraty(tidyverse)
+library(tidyverse)
 library(ROracle)
 
 calcIndex <- function(species_itis = NULL,
@@ -166,7 +166,8 @@ calcIndex <- function(species_itis = NULL,
              SEASON,
              CRUISE6,
              STRATUM,
-             SEX_TYPE) %>%
+             SEX_TYPE,
+             STRATUM_AREA) %>%
     add_tally(name = "STATIONS") %>% # Count number of stations per strata
     dplyr::reframe(STATIONS = STATIONS,
                    CATCH_WT = mean(CATCH_WT_CAL), # Average catch weight
@@ -344,3 +345,12 @@ calcIndex <- function(species_itis = NULL,
   
   return(returnList)
 }
+
+# "resampled" is the object that comes out of strata_resample
+winterFlounder <- calcIndex(species_itis = 172905,
+                            stock_abbrev = "GOMWF",
+                            IndexType = "Custom",
+                            doLogin = FALSE,
+                            surveyTowData = resampled,
+                            calibration = "B_CAL")
+
