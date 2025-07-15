@@ -36,7 +36,7 @@
 #' }
 #' @param summary_strata A vector of strata for which strata-specific mean weight and numbers (by year, season, survey) should be returned in the strata_means_summary object, default returns means for all strata.
 #'
-#' @return A list containing: If IndexType == "Custom", a list containing calculated indices, if IndexType == "Default" a list containing the following:
+#' @return A list containing: 
 #' \itemize{
 #'   \item{indices - A matrix containing stratified mean indices by weight (WT) and numbers (NO), by year, season, and survey}
 #'   \item{strata_means_summary - A matrix of strata means used in index calculations by weight (CATCH_WT) and numbers (CATCH_NO) for each year, season, and survey. Strata included in summary are specified using summary_strata argument}
