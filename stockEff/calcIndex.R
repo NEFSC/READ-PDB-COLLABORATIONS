@@ -75,7 +75,7 @@
 #'                            surveyTowData = winterFlounder$all_tows) # Because tows were not resampled this will create the same output as IndexType = "Default"
 
 
-libraty(tidyverse)
+library(tidyverse)
 library(ROracle)
 
 calcIndex <- function(species_itis = NULL,
@@ -152,6 +152,9 @@ calcIndex <- function(species_itis = NULL,
            CATCH_NO_CAL = case_when(is.na(CATCH_NO_CAL) == TRUE ~ 0,
                                     .default = CATCH_NO_CAL)) 
   
+  # Add STRATUM_AREA required to Mimic processing used to generate STOCKEFF.V_SV_STRAT_IND_O view
+  all_tows <-  left_join(all_tows, strata_areas, by = "STRATUM") 
+  
   # End IndexType == Default if statement
   ##### Custom index tow data #####
   } else if(IndexType == "Custom"){
@@ -168,7 +171,8 @@ calcIndex <- function(species_itis = NULL,
              SEASON,
              CRUISE6,
              STRATUM,
-             SEX_TYPE) %>%
+             SEX_TYPE,
+             STRATUM_AREA) %>%
     add_tally(name = "STATIONS") %>% # Count number of stations per strata
     dplyr::reframe(STATIONS = STATIONS,
                    CATCH_WT = mean(CATCH_WT_CAL), # Average catch weight
@@ -231,9 +235,6 @@ calcIndex <- function(species_itis = NULL,
         dplyr::reframe(spread_WT = range(CATCH_WT)[2]-range(CATCH_WT)[1],
                        spread_NO = range(CATCH_NO)[2]-range(CATCH_NO)[1])
     }
-    
-    # Add STRATUM_AREA required to Mimic processing used to generate STOCKEFF.V_SV_STRAT_IND_O view
-    strata_means <-  left_join(strata_means, strata_areas, by = "STRATUM") 
     
   } # End strata mean check for IndexType == "Default
   
@@ -346,3 +347,12 @@ calcIndex <- function(species_itis = NULL,
   
   return(returnList)
 }
+
+# "resampled" is the object that comes out of strata_resample
+winterFlounder <- calcIndex(species_itis = 172905,
+                            stock_abbrev = "GOMWF",
+                            IndexType = "Custom",
+                            doLogin = FALSE,
+                            surveyTowData = resampled,
+                            calibration = "B_CAL")
+
