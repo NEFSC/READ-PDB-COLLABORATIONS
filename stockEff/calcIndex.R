@@ -36,11 +36,12 @@
 #' }
 #' @param summary_strata A vector of strata for which strata-specific mean weight and numbers (by year, season, survey) should be returned in the strata_means_summary object, default returns means for all strata.
 #'
-#' @return If IndexType == "Custom", a list containing calculated indices, if IndexType == "Default" a list containing the following:
+#' @return A list containing: If IndexType == "Custom", a list containing calculated indices, if IndexType == "Default" a list containing the following:
 #' \itemize{
 #'   \item{indices - A matrix containing stratified mean indices by weight (WT) and numbers (NO), by year, season, and survey}
 #'   \item{strata_means_summary - A matrix of strata means used in index calculations by weight (CATCH_WT) and numbers (CATCH_NO) for each year, season, and survey. Strata included in summary are specified using summary_strata argument}
 #' }
+#' If IndexType == "Default" also include the following in the returned list:
 #' \itemize{
 #'   \item{indices - A matrix containing stratified mean indices calculated by weight (WT) and numbers (NO) for specified species, year and season, returned for all IndexTypes}
 #'   \item{all_tows - A matrix of all tows used in the default calculation which can be subset to populate a custom surveyTowData input}
