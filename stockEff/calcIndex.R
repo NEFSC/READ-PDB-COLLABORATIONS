@@ -34,8 +34,13 @@
 #'   \item{G_CAL - gear + door + vessel calibrations, requires CATCH_WT_G_CAL and CATCH_NO_G_CAL columns in tow data}
 #'   \item{B_CAL - bigelow + all calibrations, requires CATCH_WT_B_CAL and CATCH_NO_B_CAL columns in tow data}
 #' }
+#' @param summary_strata A vector of strata for which strata-specific mean weight and numbers (by year, season, survey) should be returned in the strata_means_summary object, default returns means for all strata.
 #'
 #' @return If IndexType == "Custom", a list containing calculated indices, if IndexType == "Default" a list containing the following:
+#' \itemize{
+#'   \item{indices - A matrix containing stratified mean indices by weight (WT) and numbers (NO), by year, season, and survey}
+#'   \item{strata_means_summary - A matrix of strata means used in index calculations by weight (CATCH_WT) and numbers (CATCH_NO) for each year, season, and survey. Strata included in summary are specified using summary_strata argument}
+#' }
 #' \itemize{
 #'   \item{indices - A matrix containing stratified mean indices calculated by weight (WT) and numbers (NO) for specified species, year and season, returned for all IndexTypes}
 #'   \item{all_tows - A matrix of all tows used in the default calculation which can be subset to populate a custom surveyTowData input}
@@ -71,8 +76,8 @@
 #'                             doLogin = FALSE,
 #'                             calibration = "B_CAL")
 #' 
-#' customExample <- calcIndex(IndexType = "Custom",
-#'                            surveyTowData = winterFlounder$all_tows) # Because tows were not resampled this will create the same output as IndexType = "Default"
+customExample <- calcIndex(IndexType = "Custom",
+                           surveyTowData = winterFlounder$all_tows) # Because tows were not resampled this will create the same output as IndexType = "Default"
 
 
 library(tidyverse)
@@ -83,7 +88,8 @@ calcIndex <- function(species_itis = NULL,
                       IndexType = "Default",
                       doLogin = FALSE,
                       surveyTowData = NULL,
-                      calibration = "B_CAL"){
+                      calibration = "B_CAL",
+                      summary_strata = NULL){
   
   # Oracle login info
   if(doLogin == TRUE){
@@ -330,6 +336,12 @@ calcIndex <- function(species_itis = NULL,
   returnList <- NULL
   returnList$indices <- indices # Stratified mean index calculated by weight (WT) and numbers (NO) for specified species, year and season
   
+  if(is.null(summary_strata) == TRUE){
+    returnList$strata_means_summary <- strata_means
+  } else{ # If summary_strata provided, only save strata_means for specified strata to save on storage
+    returnList$strata_means_summary <- strata_means %>% filter(STRATUM %in% summary_strata)
+  } 
+  
   if(IndexType == "Default"){
     # save all_tows as an output when default used so an example record of all tows used in the default calculation is provided which can be subset to populate a custom surveyTowData
     returnList$all_tows <- all_tows 
@@ -348,11 +360,4 @@ calcIndex <- function(species_itis = NULL,
   return(returnList)
 }
 
-# "resampled" is the object that comes out of strata_resample
-winterFlounder <- calcIndex(species_itis = 172905,
-                            stock_abbrev = "GOMWF",
-                            IndexType = "Custom",
-                            doLogin = FALSE,
-                            surveyTowData = resampled,
-                            calibration = "B_CAL")
 
