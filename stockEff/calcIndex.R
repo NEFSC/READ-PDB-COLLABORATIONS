@@ -71,6 +71,8 @@
 #'                             doLogin = FALSE,
 #'                             calibration = "B_CAL")
 #' 
+#' customExample <- calcIndex(IndexType = "Custom",
+#'                            surveyTowData = winterFlounder$all_tows) # Because tows were not resampled this will create the same output as IndexType = "Default"
 
 
 libraty(tidyverse)
