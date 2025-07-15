@@ -14,6 +14,8 @@ for(ifile in 1:length(files)){
 
 buildFiles <- files[documented == TRUE] # !!!!! May remove any specific problematic files or files that do not need to be updated here !!!!!!
 buildFiles <- buildFiles[-which(buildFiles == here::here("buildRPackage.R"))] # Don't try to turn this script into an R function
+buildFiles <- buildFiles[-which(grepl(pattern = ".Rmd", buildFiles))] # Don't process .Rmd files
+buildFiles <- buildFiles[-which(buildFiles %in% list.files(here::here("R"), pattern = ".R", full.names = TRUE))] # Don't reprocess R files, these will be overwritten with any changes. Will get a warning if all files already copied to R folder
 
 # Only build files that are already tracked by git (avoids adding half-baked functions created by whomever runs this script)
 # tracked_files_short <- read.table(text = base::system(command = "git ls-tree --full-tree --name-only -r main", intern = TRUE)) 
