@@ -28,7 +28,7 @@ read_stockEff(
 
 \item{mode}{A string indicating production "prod" or pre-production "test" modes, default = "prod"}
 
-\item{module}{A string indicating the module for which products will be pulled, no default. Options include: 
+\item{module}{A string indicating the module for which products will be pulled, no default. Options include:
 \itemize{
   \item{"survey" - Correspond to SV tab in stockEff}
   \item{"commercial" - Correspond to CF tab in stockEff}
@@ -48,8 +48,8 @@ read_stockEff(
 An R list object where each item in the list corresponds to a product that was pulled from stockEff and an additional date_pulled object with the time stamp. If saveout = TRUE then this object is also saved as an RData file. When returned RData file is loaded into R it will automatically be named "stockEff_storage"
 }
 \description{
-Function reads stockEff products into R and saves as a time-stamped list. 
-Options allow data to be pulled for different species, stocks, production status, modules, and sex types. 
+Function reads stockEff products into R and saves as a time-stamped list.
+Options allow data to be pulled for different species, stocks, production status, modules, and sex types.
 This is essentially an R function wrapper around the "Connecting to StockEff via R" example user guide in confluence.
 }
 \examples{
