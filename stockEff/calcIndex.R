@@ -150,6 +150,9 @@ calcIndex <- function(species_itis = NULL,
            CATCH_NO_CAL = case_when(is.na(CATCH_NO_CAL) == TRUE ~ 0,
                                     .default = CATCH_NO_CAL)) 
   
+  # Add STRATUM_AREA required to Mimic processing used to generate STOCKEFF.V_SV_STRAT_IND_O view
+  all_tows <-  left_join(all_tows, strata_areas, by = "STRATUM") 
+  
   # End IndexType == Default if statement
   ##### Custom index tow data #####
   } else if(IndexType == "Custom"){
@@ -230,9 +233,6 @@ calcIndex <- function(species_itis = NULL,
         dplyr::reframe(spread_WT = range(CATCH_WT)[2]-range(CATCH_WT)[1],
                        spread_NO = range(CATCH_NO)[2]-range(CATCH_NO)[1])
     }
-    
-    # Add STRATUM_AREA required to Mimic processing used to generate STOCKEFF.V_SV_STRAT_IND_O view
-    strata_means <-  left_join(strata_means, strata_areas, by = "STRATUM") 
     
   } # End strata mean check for IndexType == "Default
   
