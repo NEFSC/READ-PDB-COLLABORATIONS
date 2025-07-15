@@ -15,4 +15,4 @@ This sub-directory contains WHAM support functions and use examples that are not
 | demo_projected_cohort_contributions.R | Script demonstrating how to plot the proportion of each cohort in the projections (including projected recruits, a.k.a. paper fish) | Charles Perretti | 
 | LOO.R | Function to do leave one out for multi-wham | Jon Deroba |
 | local_package_howto.R | Instructions on how to load a particular commit of a package from github using WHAM as an example | Charles Perretti |
-| multi_selftest.R | Plotting results of self test in multi-wham | Charles Perretti (stolen by Jon Deroba) |
+| multi_selftestplot.R | Plotting results of self test in multi-wham | Charles Perretti (stolen by Jon Deroba) |
