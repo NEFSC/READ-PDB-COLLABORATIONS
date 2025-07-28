@@ -49,7 +49,7 @@ makeReportData <- function(model_MT = NULL,
   return_list$MT_MohnsRho <- MT_results$Mohns_rho
   return_list$MT_termyr <- MT_results$termyr.ests.cis
   
-  # Check if retro is significant (TRUE if rho-adjusted F or SSB in terminal year falls outside 95% CI for model estimate)
+  # Check if retro is significant (TRUE if rho-adjusted F or SSB in terminal year falls outside 90% CI for model estimate)
   check_SSBadj <- MT_results$SSB.yr_adj %>% group_by(YEAR) %>% mutate(doAdj_SSB = (est.adj <= hi_90 & est.adj >= lo_90) == FALSE) %>% tail(n=1) %>% select(doAdj_SSB)
   check_Fadj <- MT_results$F.yr_adj %>% group_by(YEAR) %>% mutate(doAdj_F = (est.adj <= hi_90 & est.adj >= lo_90) == FALSE) %>% tail(n=1) %>% select(doAdj_F)
   return_list$MT_retro.signif <- TRUE %in% full_join(check_SSBadj, check_Fadj) # Returns FALSE if no SSB or F adjustment needed and TRUE if either require an adjustment
