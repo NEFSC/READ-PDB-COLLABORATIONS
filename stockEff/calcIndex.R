@@ -35,6 +35,11 @@
 #'   \item{B_CAL - bigelow + all calibrations, requires CATCH_WT_B_CAL and CATCH_NO_B_CAL columns in tow data}
 #' }
 #' @param summary_strata A vector of strata for which strata-specific mean weight and numbers (by year, season, survey) should be returned in the strata_means_summary object, default returns means for all strata.
+#' @param swept_area DRAFT ONLY: Option only available for IndexType == "Default". A list containing the following to calculate a swept_area biomass index, if NULL then relative index of abundance calculated as in stockEff. Default = NULL.
+#' \itemize{
+#'   \item{catchability -  A number for catchability applied to all ages/lengths when calculating an index}
+#'   \item{length_condition - A string containing a conditional statement to select the LENGTH used in index calculations (e.g. "LENGTH >=30" includes fish greater or equal to 30cm in index), must include a reference to "LENGTH" variable}
+#' }
 #'
 #' @return A list containing: 
 #' \itemize{
@@ -64,6 +69,8 @@
 #'                             IndexType = "Default",
 #'                             doLogin = FALSE,
 #'                             calibration = "B_CAL")
+#'                             swept_area = list(catchability = 1,
+#'                             length_condition = "LENGTH >= 30")
 #' 
 #' plaice <- calcIndex(species_itis = 172877,
 #'                     stock_abbrev = "UNIT",
@@ -90,7 +97,8 @@ calcIndex <- function(species_itis = NULL,
                       doLogin = FALSE,
                       surveyTowData = NULL,
                       calibration = "B_CAL",
-                      summary_strata = NULL){
+                      summary_strata = NULL,
+                      swept_area = NULL){
   
   # Oracle login info
   if(doLogin == TRUE){
@@ -118,7 +126,14 @@ calcIndex <- function(species_itis = NULL,
     # Check index calculations
     V_SV_STRAT_IND_O <- ROracle::dbGetQuery(connection, statement = paste0("select * from STOCKEFF.V_SV_STRAT_IND_O where species_itis = '", species_itis, "' and stock_abbrev = '", stock_abbrev, "'"))  # from V_SV_STRAT_IND_O
     
-    ###### Survey data processing ######
+  ###### Survey data processing ######
+    if(is.null(swept_area) == FALSE){
+      #!!! add in the swept area length filtering here - currently this is only a draft !!!
+      catch_calib_o <- parse(text = paste0("filter(catch_calib_o, ", swept_area$length_condition, ")")) %>% eval() %>% 
+        group_by(SPECIES_ITIS, STOCK_ABBREV, PURPOSE_CODE, YEAR, SEASON, STRATUM) %>%
+      mutate(CATCH_NO_) #!!! need to calculate catch_wt for only the fish of selected lengths - individual wt not reported in catch_calib_o, would need to step further back in code
+    }
+  
   # Collapse duplicate WT/NO inputs when multiple lengths sampled
   catch_cal_temp <- catch_calib_o %>% 
     select(COMMON_NAME, SPECIES_ITIS, SVSPP, STOCK_ABBREV, STOCK_NAME, PURPOSE_CODE, YEAR, SEASON, CRUISE6, STRATUM, STATION, SEX, SEX_TYPE, TOW, CATCH_WT_B_CAL, CATCH_NO_B_CAL) %>% 
@@ -196,7 +211,7 @@ calcIndex <- function(species_itis = NULL,
            CATCH_NO_CV = case_when(is.nan(CATCH_NO_CV) ~ NA, # If CV can't be calculated (e.g. no stations in a stratum) set to NA
                                    .default = CATCH_NO_CV))
   
-  if(IndexType == "Default"){
+  if(IndexType == "Default" & is.null(swept_area)){ # stockEff doesn't do swept_area calculations so don't reun checks if you use this option 
     ###### Check strata means ######
     # If strata specific CATCH_WT and CATCH_NO match to 4 digits, if yes proceed without issue, if not proceed with caution an confirm that differences are small (i.e. likely due to rounding differences but worth checking) 
     # Rounding differences more prevalent in var, stderror, cv so not part of check
@@ -248,6 +263,7 @@ calcIndex <- function(species_itis = NULL,
   
   
   ###### Index calculations ######
+  #!!! apply q for swept area biomass if swept_area != NULL - this options is not built out at present
   # Mimic processing used to generate STOCKEFF.V_SV_STRAT_IND_O view which is used to populate the final strat_mean.csv product available through the web interface
   indices <- strata_means %>% 
     #filter(YEAR == 1982, SEASON == "FALL") %>% 
@@ -272,7 +288,7 @@ calcIndex <- function(species_itis = NULL,
     mutate(STRATA_SAMPLING_COMPLETE = case_when(TOTAL_SAMP_AREA == max_SAMP_AREA ~ "Y",
                                                 .default = "N"))
   
-  if(IndexType == "Default"){
+  if(IndexType == "Default" & is.null(swept_area)){ # stockEff doesn't do swept_area calculations so don't reun checks if you use this option #!!! check & works and not && needed
     ###### Check index ######
     # Check if stratified mean index matches V_SV_STRAT_IND_O product
     stockEff_check <-  V_SV_STRAT_IND_O %>%
