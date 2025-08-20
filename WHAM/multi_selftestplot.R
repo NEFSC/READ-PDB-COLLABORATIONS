@@ -43,7 +43,7 @@ selftesterrorfxn=function(metric=NULL,mod=NULL,selftest=NULL){
   if(metric=="Rec") {
     true = mod$rep["NAA"][[1]][1,1,,1] 
     est = sapply(selftest[[1]], function(x) return(x$NAA[1,1,,1] ))
-    est=matrix(unlist(est), ncol = length(est), byrow = FALSE)
+    est=matrix(unlist(est), ncol = ncol(est), byrow = FALSE)
     rel_resid = apply(est,2, function(x) x/true - 1)
     mean.metric=apply(rel_resid,1,mean)
     median.metric=apply(rel_resid,1,median)
