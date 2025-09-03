@@ -32,7 +32,7 @@
 #'
 #' NOTE:
 #' - You must have the httr package loaded to run this function if you are not using the pdbCollaborations package implementation
-#' - The function cannot query assessment_info.csv products (you will get the following error if you try: "Error in read.table ... more columns than column names)
+#' - The function cannot query assessment_info.csv products (you will get the following error if you try: "Error in read.table ... more columns than column names")
 
 read_stockEff <- function(doLogin = TRUE,
                           species_itis = NULL,
