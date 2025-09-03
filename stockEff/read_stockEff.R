@@ -24,12 +24,15 @@
 #'
 #' @examples
 #' # GB cod survey pre-production survey example
-#' read_stockEff(species_itis = 164712, stock_abbrev = "GBK", sex_type = "NONE", module = "survey", mode = "test", product = c("assessment_information", "strat_mean", "strat_mean_length"), outname = "example_GBcod_survey")
+#' read_stockEff(species_itis = 164712, stock_abbrev = "GBK", sex_type = "NONE", module = "survey", mode = "test", product = c("strat_mean", "strat_mean_length"), outname = "example_GBcod_survey")
 #' # Female spiny dogfish production survey example
-#' read_stockEff(species_itis = 160617, stock_abbrev = "UNIT", sex_type = "FEMALE", module = "survey", mode = "prod", product = c("assessment_information", "strat_mean", "strat_mean_length"), outname = "example_FEMALEdogfish_survey")
+#' read_stockEff(species_itis = 160617, stock_abbrev = "UNIT", sex_type = "FEMALE", module = "survey", mode = "prod", product = c("strat_mean", "strat_mean_length"), outname = "example_FEMALEdogfish_survey")
 #' # Butterfish production CF example
-#' read_stockEff(doLogin = FALSE, species_itis = 172567, stock_abbrev = "UNIT", sex_type = "NONE", module = "commercial", mode = "prod", product = c("assessment_info", "landings_gear", "bio_data_summary"), outname = "example_butterfish_CF")
-
+#' read_stockEff(doLogin = FALSE, species_itis = 172567, stock_abbrev = "UNIT", sex_type = "NONE", module = "commercial", mode = "prod", product = c("landings_gear", "bio_data_summary"), outname = "example_butterfish_CF")
+#'
+#' NOTE:
+#' - You must have the httr package loaded to run this function if you are not using the pdbCollaborations package implementation
+#' - The function cannot query assessment_info.csv products (you will get the following error if you try: "Error in read.table ... more columns than column names)
 
 read_stockEff <- function(doLogin = TRUE,
                           species_itis = NULL,
