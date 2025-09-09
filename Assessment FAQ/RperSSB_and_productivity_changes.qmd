@@ -28,7 +28,7 @@ A time series of recruits per spawning stock biomass can only be used to detect 
 
 ## Productivity
 
-There are many definitions of productivity, including the sum of recruitment, growth, and natural mortality (@Prager1994), the ratio of outputs to inputs (@Pan2015), the catch per unit area for a region (@Stock2017), or the slope of the stock-recruitment curve at the origin (@Bell2023). Here, we define a change in productivity as a change in the stock-recruitment function over time. We examine whether the ratio of recruit abundance to spawning stock biomass (R/SSB) is a valid proxy for productivity. We will not directly address the use of covariates to try to explain changes in recruitment. Rather, we first explore some of the situations that can lead to expected changes in R/SSB and then address the common approach of examining a time series of R/SSB to determine which years to include in projected recruitment because the stock is thought to be in a new productivity regime.
+There are many definitions of productivity, including the sum of recruitment, growth, and natural mortality (@Prager1994), the ratio of outputs to inputs (@Pan2015), the catch per unit area for a region (@Stock2017), or the slope of the stock-recruitment curve at the origin (@Bell2023). Surplus production models attempt to directly estimate the stock size that allows the largest catch to be taken on a continuing basis under the assumption that low stock sizes result in reduced reproduction while high stock sizes have density dependent impacts (@Mildenberger2025). Changes in stock productivity have been known for a long time (@BH1957, @Walters1987, @HilbornWalters1992). Here, we define a change in productivity as a change in the stock-recruitment function over time. We examine whether the ratio of recruit abundance to spawning stock biomass (R/SSB) is a valid proxy for productivity. We will not directly address the use of covariates to try to explain changes in recruitment. Rather, we first explore some of the situations that can lead to expected changes in R/SSB and then address the common approach of examining a time series of R/SSB to determine which years to include in projected recruitment because the stock is thought to be in a new productivity regime.
 
 
 
@@ -70,27 +70,28 @@ ggplot(df, aes(x=SSB, y=R)) +
   )
 ```
 
-If we continue to define a change in productivity as a change in the stock-recruitment relationship, we can see in the figure above that R/SSB does reflect a difference in productivity when SSB is held constant. For example, point A has higher R/SSB and higher productivity than point C. However, when SSB differs, R/SSB may not reflect the correct change in the productivity. In the figure above, the stock-recruitment curve passes through points A and B. There is no change in the dashed stock-recruitment curve as it moves from A to B, however there is a change in R/SSB. This lack of relationship can be seen more generally by examining all the values of R and R/SSB for a range of SSB (@fig-sr-rpssb). When the Beverton-Holt stock-recruitment relationship (@BH1957) is followed exactly, the associated R/SSB has a strong increase as SSB decreases from the unfished population to the origin. In contrast, a constant R/SSB is associated with a straight line on the stock-recruitment plot, as noted above, meaning there is no density dependence in recruitment with increasing SSB, something that is biologically impossible across the full range of SSB for the stock as it would imply an infinite or zero population in equilibrium.
+If we continue to define a change in productivity as a change in the stock-recruitment relationship, we can see in the figure above that R/SSB does reflect a difference in productivity when SSB is held constant. For example, point A has higher R/SSB and higher productivity than point C. However, when SSB differs, R/SSB may not reflect the correct change in the productivity. In the figure above, the stock-recruitment curve passes through points A and B. There is no change in the dashed stock-recruitment curve as it moves from A to B, however there is a change in R/SSB. This lack of relationship can be seen more generally by examining all the values of R and R/SSB for a range of SSB (@fig-sr-rpssb). When the Beverton-Holt stock-recruitment relationship (@BH1957) is followed exactly, the associated R/SSB has a strong increase as SSB decreases from the unfished population to the origin. In contrast, a constant R/SSB is associated with a straight line on the stock-recruitment plot, as noted above, meaning there is no density dependence in recruitment with increasing SSB, something that is biologically impossible across the full range of SSB for the stock as it would imply an infinite or zero population in equilibrium. A constant recruitment stock-recruitment relationship is hyperbolic when plotted as R/SSB versus SSB (values of R/SSB go to infinity as SSB goes to zero).
 
 ```{r}
 #| label: fig-sr-rpssb
-#| fig-cap: Recruits and recruits per spawning stock biomass (R/SSB) as a function of SSB. Two lines are shown in each panel. One is for a Beverton-Holt stock-recruitment curve (denoted SR curve) and the other shows a constant R/SSB.
+#| fig-cap: Recruits and recruits per spawning stock biomass (R/SSB) as a function of SSB. Three lines are shown in each panel. One is for a Beverton-Holt stock-recruitment curve (denoted SR curve), one shows a constant R/SSB, and the final shows a constant recruitment.
 
 S0 <- 10000
 R0 <- 50000
 spr0 <- S0/R0
 steep <- 0.7
-alpha <- 4 * steep * R0 / (5 * steep - 1)
-beta <- S0 * (1 - steep) / (5 * steep - 1)
+alpha <- 4 * steep * R0 / (S0 * (1 - steep))
+beta <- (alpha * spr0 - 1) / S0
 
 ssb <- seq(1, S0, length.out = 1000)
-recruits <- alpha * ssb / (beta + ssb)
+recruits <- alpha * ssb / (1 + beta * ssb)
 
 srcurve <- tibble(Source="SR curve", SSB=ssb, Recruits=recruits)
 constantrperssb <- tibble(Source="Constant R/SSB", SSB=ssb, Recruits=10 * ssb)
+constr <- tibble(Source="Constant R", SSB=ssb, Recruits=44000) 
 
-mydat <- rbind(srcurve, constantrperssb) |>
-  mutate("R/SSB"=Recruits/SSB) |>
+mydat <- rbind(srcurve, constantrperssb, constr) |>
+  mutate("R/SSB"=ifelse(Recruits/SSB > 50, NA, Recruits/SSB)) |>
   pivot_longer(cols = c(Recruits, "R/SSB"), names_to = "Response", values_to = "value") 
 
 ggplot(mydat, aes(x=SSB, y=value, color=Source)) +
@@ -106,7 +107,7 @@ In the Woods Hole Assessment Model (WHAM, @Stock2021), there are multiple option
 
 
 $$
-R = \frac{\alpha ~ SSB ~ e^{\theta_1 X}}{\beta ~ e^{\theta_2 X} ~ + ~ SSB ~ e^{\theta_3 X}}
+R = \frac{\alpha ~ SSB ~ e^{\theta_1 X}}{e^{\theta_2 X} ~ + \beta ~ ~ SSB ~ e^{\theta_3 X}}
 $$ {#eq-cmlsr}
 
 ```{r}
@@ -118,7 +119,7 @@ mask_thetas <- c(0, 1, 0)
 limit_thetas <- c(0, 0, 1)
 
 apply_thetas <- function(thetas, X, alpha, beta, ssb){
-  recruits <- alpha * ssb * exp(thetas[1]*X) / (beta * exp(thetas[2]*X) + ssb * exp(thetas[3]*X))
+  recruits <- alpha * ssb * exp(thetas[1]*X) / (exp(thetas[2]*X) + beta * ssb * exp(thetas[3]*X))
   return(recruits)
 }
 
@@ -154,7 +155,7 @@ ggplot(cmldf, aes(x=SSB, y=value, color=as.factor(X))) +
 
 calc_steepness <- function(thetas, X, alpha, beta, spr0, runname){
   cval <- exp(thetas * X)
-  SSB0 <- (alpha * spr0 * cval[1] - beta * cval[2]) / cval[3]
+  SSB0 <- (alpha * spr0 * cval[1] - cval[2]) / (beta * cval[3])
   R0 <- apply_thetas(thetas, X, alpha, beta, SSB0)
   steep <- round(apply_thetas(thetas, X, alpha, beta, 0.2 * SSB0) / R0, 3)
   res <- tibble(Case = runname, Val1 = cval[1], Val2 = cval[2], Val3 = cval[3], Steepness = steep)
@@ -188,9 +189,9 @@ when SSB is below the breakpoint. For a given value of $\beta_d$, $\alpha_d$ can
 #| fig-cap: Recruits and recruits per spawning stock biomass (R/SSB) as a function of SSB for the standard stock-recruitment curve along with three types of depensation, defined by the parameter $\beta_d$, when the breakpoint is set at 0.2 of $SSB_0$.
 
 calc_sr_depensation <- function(alpha, beta, ssb_breakpoint, depen_beta, ssb){
-  r_breakpoint <- alpha * ssb_breakpoint / (beta + ssb_breakpoint)
+  r_breakpoint <- alpha * ssb_breakpoint / (1 + beta * ssb_breakpoint)
   depen_alpha <- r_breakpoint / (ssb_breakpoint^depen_beta)
-  recruits_depen <- ifelse(ssb <= ssb_breakpoint, depen_alpha*ssb^depen_beta, alpha * ssb / (beta + ssb))
+  recruits_depen <- ifelse(ssb <= ssb_breakpoint, depen_alpha*ssb^depen_beta, alpha * ssb / (1 + beta * ssb))
   return(recruits_depen)
 }
 
@@ -466,7 +467,7 @@ Change point analyses have been demonstrated to perform poorly in terms of ident
 
 ## Real world examples
 
-To see what real R/SSB time series look like, a number of old ASAP rdat files from actual assessments were collected. The stock names have been hidden and all the years changes to run from one to the length of the R/SSB series to protect the innocent. There is quite a range observed even in this relatively small sample size (@fig-real-world-rpssb-year). Some R/SSB time series have relatively smooth patterns while others fluctuate widely from year to year. These examples are not necessarily the final model runs for the stock assessments. In most cases (11 of the 12), steepness was not estimated, with most of those situations (8 of 11) fixed at the value 1, meaning that effectively ASAP was estimating recruitment deviations about a mean value. Looking only at the R/SSB time series, many reviewers would be inclined to suggest that changes in productivity had occurred, without considering whether changes in SSB could be driving the changes in R/SSB. However, examining R/SSB as a function of SSB shows that many of the stocks have the expected inverse relationship (@fig-real-world-rpssb-ssb) and the standard stock-recruit plots do not necessarily indicate large productivty shifts (@fig-real-world-sr). The R/SSB time series should not be examined in isolation of these other two plots, because what can look like productivity shifts in the R/SSB time series might be easily explained when put into context of changes in SSB.
+To see what real R/SSB time series look like, a number of old ASAP rdat files from actual assessments were collected. The stock names have been hidden and all the years changes to run from one to the length of the R/SSB series to protect the innocent. There is quite a range observed even in this relatively small sample size (@fig-real-world-rpssb-year). Some R/SSB time series have relatively smooth patterns while others fluctuate widely from year to year. These examples are not necessarily the final model runs for the stock assessments. In most cases (11 of the 12), steepness was not estimated, with most of those situations (8 of 11) fixed at the value 1, meaning that effectively ASAP was estimating recruitment deviations about a mean value. Looking only at the R/SSB time series, many reviewers would be inclined to suggest that changes in productivity had occurred, without considering whether changes in SSB could be driving the changes in R/SSB. However, examining R/SSB as a function of SSB shows that many of the stocks have the expected inverse relationship (@fig-real-world-rpssb-ssb) and the standard stock-recruit plots do not necessarily indicate large productivity shifts (@fig-real-world-sr). The R/SSB time series should not be examined in isolation of these other two plots, because what can look like productivity shifts in the R/SSB time series might be easily explained when put into context of changes in SSB.
 
 ```{r}
 #| label: fig-real-world-rpssb-year
@@ -505,7 +506,7 @@ ggplot(dfrl, aes(x=Year, y=RpSSB)) +
 #| label: fig-real-world-rpssb-ssb
 #| fig-cap: Recruits per spawning stock biomass (R/SSB) plotted against SSB for twelve stocks.
 
-ggplot(dfrl, aes(x=SSB, y=RpSSB)) +
+ggplot(dfrl, aes(x=SSB, y=RpSSB, color=Year)) +
   geom_point() +
   facet_wrap(~stock, scales="free", ncol=3) +
   ylab("R/SSB") +
@@ -518,7 +519,7 @@ theme_bw()
 #| label: fig-real-world-sr
 #| fig-cap: Standard stock-recruitment plot for twelve stocks.
 
-ggplot(dfrl, aes(x=SSB, y=Recruits)) +
+ggplot(dfrl, aes(x=SSB, y=Recruits, color=Year)) +
   geom_point() +
   facet_wrap(~stock, scales="free", ncol=3) +
   expand_limits(x = 0, y = 0) +
@@ -552,10 +553,9 @@ When the full state-space stock assessment with environmental covariate or time-
     +  Develop more structured guidance of how to use (or not) R/SSB time series
     +  Simulation studies of how much R/SSB time series can mislead regarding productivity changes 
 
-## To do
+## Acknowledgments
 
-- [ ] Optional PDB Lunchtime Chat (September 4)
-- [ ] Respond to feedback from PDB
+Thanks to the Population Dynamics Branch for feedback on an earlier draft of this work. 
 
 ## Note
 
