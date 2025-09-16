@@ -2,6 +2,7 @@
 # (aka paper fish, aka faith-based fish) in the catch.
 #
 # Written by Charles Perretti
+# Updated 2025-09-16 to improve colors in plots
 
 
 # Set wd to source file location (will save output to same directory as script)
@@ -38,6 +39,19 @@ proj <- project_wham(mod,
 
 min_year <- 2016 # Choose first year to plot
 
+plot_data <- proj_cbaa %>% filter(Year >= min_year)
+
+cohort_levels <- unique(plot_data$Cohort)
+
+manual_level <- "Projected recruits"
+
+other_levels <- setdiff(cohort_levels, manual_level)
+
+other_colors <- viridis::viridis(length(other_levels))
+names(other_colors) <- other_levels
+
+all_colors <- c(other_colors, "Projected recruits" = "gray")
+
 # Plot projected catch biomass-at-age by cohort
 proj_cbaa <- 
   data.frame(Year = proj$years_full, 
@@ -52,9 +66,10 @@ proj_cbaa <-
          Age = as.numeric(Age),
          Cohort = as.character(Year - Age),
          Cohort = ifelse(Age == mod$env$data$n_ages, "Plus group", Cohort),
-         Cohort = ifelse(Cohort %in% as.character(setdiff(proj$years_full, proj$years)), "Projected recruits",
-                         Cohort)
-         ) %>%
+         Cohort = ifelse(Cohort %in% as.character(setdiff(proj$years_full, proj$years)), 
+                         "Projected recruits",
+                         Cohort),
+         Cohort = forcats::fct_relevel(Cohort, "Plus group")) %>%
   group_by(Year) %>%
   mutate(cbaa_prop = cbaa/sum(cbaa))
 
@@ -62,7 +77,7 @@ ggplot(proj_cbaa %>% filter(Year >= min_year),
        aes(x = Year, y = cbaa_prop, fill = Cohort)) +
   geom_bar(position="stack", stat="identity") +
   geom_vline(xintercept = max(proj$years + 0.5)) +
-  viridis::scale_fill_viridis(discrete = TRUE) +
+  scale_fill_manual(values = all_colors) +
   ylab("Proportion of catch") +
   theme_bw() +
   ggtitle("Proportion of catch by cohort")
@@ -74,7 +89,7 @@ ggplot(proj_cbaa %>% filter(Year >= min_year),
        aes(x = Year, y = cbaa, fill = Cohort)) +
   geom_bar(position="stack", stat="identity") +
   geom_vline(xintercept = max(proj$years + 0.5)) +
-  viridis::scale_fill_viridis(discrete = TRUE) +
+  scale_fill_manual(values = all_colors) +
   ylab("Catch (mt)") +
   theme_bw() +
   ggtitle("Catch by cohort")
