@@ -1,5 +1,5 @@
 # This code demonstrates how to calculate the proportion of projected recruits
-# (aka paper fish, aka faith-based fish) in the catch.
+# in the catch.
 #
 # Written by Charles Perretti
 # Updated 2025-09-16 to improve colors in plots
@@ -39,23 +39,12 @@ proj <- project_wham(mod,
 
 min_year <- 2016 # Choose first year to plot
 
-plot_data <- proj_cbaa %>% filter(Year >= min_year)
-
-cohort_levels <- unique(plot_data$Cohort)
-
-manual_level <- "Projected recruits"
-
-other_levels <- setdiff(cohort_levels, manual_level)
-
-other_colors <- viridis::viridis(length(other_levels))
-names(other_colors) <- other_levels
-
-all_colors <- c(other_colors, "Projected recruits" = "gray")
 
 # Plot projected catch biomass-at-age by cohort
 proj_cbaa <- 
   data.frame(Year = proj$years_full, 
              proj$rep$pred_CAA[,,]) %>%
+  filter(Year >= min_year) %>%
   gather(Age, caa, -Year) %>%
   mutate(Age = substr(Age, 2, 3)) %>%
   left_join({data.frame(Year = proj$years_full, 
@@ -73,6 +62,19 @@ proj_cbaa <-
   group_by(Year) %>%
   mutate(cbaa_prop = cbaa/sum(cbaa))
 
+# Adjust colors
+cohort_levels <- unique(proj_cbaa$Cohort)
+
+manual_level <- "Projected recruits"
+
+other_levels <- setdiff(cohort_levels, manual_level)
+
+other_colors <- viridis::viridis(length(other_levels))
+names(other_colors) <- other_levels
+
+all_colors <- c(other_colors, "Projected recruits" = "gray")
+
+# Make plots
 ggplot(proj_cbaa %>% filter(Year >= min_year), 
        aes(x = Year, y = cbaa_prop, fill = Cohort)) +
   geom_bar(position="stack", stat="identity") +
