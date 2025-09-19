@@ -16,3 +16,4 @@ This sub-directory contains WHAM support functions and use examples that are not
 | LOO.R | Function to do leave one out for multi-wham | Jon Deroba |
 | local_package_howto.R | Instructions on how to load a particular commit of a package from github using WHAM as an example | Charles Perretti |
 | multi_selftestplot.R | Plotting results of self test in multi-wham | Charles Perretti (stolen by Jon Deroba) |
+| simple_WHAM_rho_adjusted_projections.R | Deterministic (no uncertainty estimates) rho-adjusted projections | Chris Legault |
