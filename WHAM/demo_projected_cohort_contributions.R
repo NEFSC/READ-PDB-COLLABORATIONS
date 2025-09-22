@@ -82,7 +82,8 @@ ggplot(proj_cbaa %>% filter(Year >= min_year),
   scale_fill_manual(values = all_colors) +
   ylab("Proportion of catch") +
   theme_bw() +
-  ggtitle("Proportion of catch by cohort")
+  ggtitle("Proportion of catch by cohort") +
+  labs(caption = "The vertical black line marks the start of the projection period.")
 
 
 ggsave("projected_catch_by_cohort.png", w = 6, h = 5)
@@ -94,7 +95,8 @@ ggplot(proj_cbaa %>% filter(Year >= min_year),
   scale_fill_manual(values = all_colors) +
   ylab("Catch (mt)") +
   theme_bw() +
-  ggtitle("Catch by cohort")
+  ggtitle("Catch by cohort")  +
+  labs(caption = "The vertical black line marks the start of the projection period.")
 
 
 ggsave("projected_catch_biomass_by_cohort.png", w = 6, h = 5)
