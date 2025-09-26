@@ -1,7 +1,7 @@
 ---
 title: "CAMS discard tripping hazard"
 author: "Chris Legault"
-date: June 3, 2025
+date: September 26, 2025
 format: 
   html:
     page-layout: full
@@ -13,17 +13,21 @@ highlight-style: zenburn
 
 Do not link CAMS_DISCARD_STRATA to CAMS_DISCARD_ALL_YEARS when summarizing CAMS discards due to null strata_used_desc values. Instead build up the desired variables in a join, then summarize.
 
+## Update
+
+The Center moved all Oracle tables to the cloud in September 2025. As a result, the public synonyms for CAMS no longer worked and the CAMS_GARFO schema had to be explicitly used. The [CAMS 2.1.0 update](https://apps-garfo.fisheries.noaa.gov/cams/news.html#maps-210) also changed some column names. For example, in the CFG_STATAREA_STOCK table, the column area_name was renamed to species_estimation_region. The code below now reflects both these changes.
+
 ## Details
 
 CAMS 2.0 reduced the size of CAMS_DISCARD_ALL_YEARS by removing a number of columns and creating a new table called CAMS_DISCARD_STRATA to serve as a look up table to decipher the strata_used_desc column. The strata_used_desc column is described as the primary key linking the CAMS_DISCARD_ALL_YEARS and CAMS_DISCARD_STRATA tables. However, the null values for observed trips means that the additional information from CAMS_DISCARD_STRATA cannot be used and the information must be found another way. 
 
-This problem can be seen in the "Simple Black Sea Bass example - bad" code and results shown below. Joining CAMS_DISCARD_ALL_YEARS and CAMS_DISCARD_STRATA using strata_used_desc when grouping by species_stock and discard_source results in the expected values for the North and South groups of black sea bass and discard_sources of G, GM, I, and T, but the observed trips (discard_source = 'O') do not get assigned to either the North or South group, instead they appear as a null group. While this is not a large portion of the total discards, it could be a problem if this approach was used to determine the North and South discards and the null area was ignored. 
+This problem can be seen in the "Simple Black Sea Bass example - bad" code and results shown below. Joining CAMS_DISCARD_ALL_YEARS and CAMS_DISCARD_STRATA using strata_used_desc when grouping by species_estimation_region and discard_source results in the expected values for the North and South groups of black sea bass and discard_sources of G, GM, I, and T, but the observed trips (discard_source = 'O') do not get assigned to either the North or South group, instead they appear as a null group. While this is not a large portion of the total discards, it could be a problem if this approach was used to determine the North and South discards and the null area was ignored. 
 
-One way to address this problem can be seen in the "Simple Black Sea Bass example - good" code and results shown below. The strategy is to create a subset of subtrips from CAMS_DISCARD_ALL_YEARS by joining to a number of configuration files and selecting variables of interest. In this case, cams_subtrip is used to identify the area where the subtrip occurred and cams_cfg_statarea_stock is used to assign the area for each subtrip to a species_stock. The results of this portion of the code are then treated as a dataset on which to derive the desired sums. The results for this approach now show all the Black Sea Bass discards correctly assigned to the North and South area by discard source.
+One way to address this problem can be seen in the "Simple Black Sea Bass example - good" code and results shown below. The strategy is to create a subset of subtrips from CAMS_DISCARD_ALL_YEARS by joining to a number of configuration files and selecting variables of interest. In this case, cams_subtrip is used to identify the area where the subtrip occurred and cfg_statarea_stock is used to assign the area for each subtrip to a species_estimation_region. The results of this portion of the code are then treated as a dataset on which to derive the desired sums. The results for this approach now show all the Black Sea Bass discards correctly assigned to the North and South area by discard source.
 
 In the simple example, the incorrect assignment was easy to notice due to the small number of records returned by the bad code. The null values will not always be as easily noticed when a more detailed breakdown is requested. Special thanks to Emily Liljestrand for bringing this problem to my attention and leading to this document.
 
-The "Complex Black Sea Bass example - bad" provides a demonstration of how challenging it can be to even notice that the null values are present due to the large number of records returned. In this example, the Black Sea Bass discards are desired by species_stock, cams_gear_group, and month. Ignoring the lack of ability to match on the null records for discard_source = 'O' results in 366 records with 92.4 metric tons of discards in species_stock = null. If this relatively large number of records was not closely examined, the null area discards could easily be missed. Similarly, if only one of the areas was desired as the result, say the North area, in the call, then the null areas would not be included and the discard values would be incorrect. Note that even though discard_source is not one of the desired breakdowns, the inability to match discard_source = 'O' still causes a problem. There are 92.4 mt of discards with null area and null cams_gear_group due to the matching process. Since month is extracted from the date_trip found in the CAMS_DISCARD_ALL_YEARS, it can be summed correctly because even the discard_source = 'O' records in this table have the date_trip so no joining to CAMS_DISCARD_STRATA is needed for this variable.
+The "Complex Black Sea Bass example - bad" provides a demonstration of how challenging it can be to even notice that the null values are present due to the large number of records returned. In this example, the Black Sea Bass discards are desired by species_estimation_region, cams_gear_group, and month. Ignoring the lack of ability to match on the null records for discard_source = 'O' results in 374 records with 92.5 metric tons of discards in species_estimation_region = null. If this relatively large number of records was not closely examined, the null area discards could easily be missed. Similarly, if only one of the areas was desired as the result, say the North area, in the call, then the null areas would not be included and the discard values would be incorrect. Note that even though discard_source is not one of the desired breakdowns, the inability to match discard_source = 'O' still causes a problem. There are 92.5 mt of discards with null area and null cams_gear_group due to the matching process. Since month is extracted from the date_trip found in the CAMS_DISCARD_ALL_YEARS, it can be summed correctly because even the discard_source = 'O' records in this table have the date_trip so no joining to CAMS_DISCARD_STRATA is needed for this variable.
 
 The approach to solve the problem is the same, with the only changes in the bottom portion of the code where the sums are made, as seen in the "Complex Black Sea Bass example - good" code below. Grabbing the results of both the good and bad examples and summing the discard mt demonstrates that the totals for both approaches are the same, it is just that the observed trips are correctly apportioned in the good example. This complex example also demonstrates the ability to convert discard pounds to metric tons and estimate the coefficient of variance of the discards. These additional steps are nice to have and demonstrate that SQL code can be built slowly one step at a time to result in complex results, but that checking should always be done on results to ensure that records are not lost and that Cartesian products are not formed.
 
@@ -32,26 +36,26 @@ The approach to solve the problem is the same, with the only changes in the bott
 ```sql
 select a.itis_tsn
   , a.year
-  , b.species_stock
+  , b.species_estimation_region
   , a.discard_source
   , sum(a.cams_discard) as discard_lb
-  from cams_discard_all_years a
-  left join cams_discard_strata b
+  from cams_garfo.cams_discard_all_years a
+  left join cams_garfo.cams_discard_strata b
   on a.strata_used_desc = b.strata_used_desc
   where a.itis_tsn = '167687' 
   and a.year = 2024 
-  group by a.itis_tsn, a.year, b.species_stock, a.discard_source
-  order by a.year, b.species_stock, a.discard_source;
+  group by a.itis_tsn, a.year, b.species_estimation_region, a.discard_source
+  order by a.year, b.species_estimation_region, a.discard_source;
 /*
-167687	2024	NORTH   G    192503.44
-167687	2024	NORTH   GM    46875.79
-167687	2024	NORTH   I   2041406.77
-167687	2024	NORTH   T         1.34
-167687	2024	SOUTH   G      7143.41
-167687	2024	SOUTH   GM   168252.58
-167687	2024	SOUTH   I     73974.88
-167687	2024	SOUTH   T      2055.94
-167687	2024	(null)  O    130914.58
+167687	2024	NORTH	G	196410.74
+167687	2024	NORTH	GM	57011.86
+167687	2024	NORTH	I	2007589.88
+167687	2024	NORTH	T	1.34
+167687	2024	SOUTH	G	7776.89
+167687	2024	SOUTH	GM	172701.92
+167687	2024	SOUTH	I	75168.77
+167687	2024	SOUTH	T	2055.24
+167687	2024	(null)	O	133521.91
 */
 
 ```
@@ -63,9 +67,9 @@ with joins as (
     select y.*
     , s.area
     , a.area_type
-    , a.area_name as species_stock
+    , a.species_estimation_region
     , e.cams_gear_group
-    from cams_discard_all_years y
+    from cams_garfo.cams_discard_all_years y
     left join cams_garfo.cams_subtrip s
     on (y.camsid = s.camsid and y.subtrip = s.subtrip)
     left join cams_garfo.cfg_statarea_stock a
@@ -80,26 +84,26 @@ with joins as (
 
 select itis_tsn
   , year
-  , species_stock
+  , species_estimation_region
   , discard_source
   , sum(cams_discard) as discard_lb
 from joins
 group by itis_tsn
   , year
-  , species_stock
+  , species_estimation_region
   , discard_source
-order by species_stock, discard_source;
+order by species_estimation_region, discard_source;
 /*
-167687	2024	NORTH	G    192503.44
-167687	2024	NORTH	GM    46875.79
-167687	2024	NORTH	I   2041406.77
-167687	2024	NORTH	O    126550.42
-167687	2024	NORTH	T         1.34
-167687	2024	SOUTH	G      7143.41
-167687	2024	SOUTH	GM   168252.58
-167687	2024	SOUTH	I     73974.88
-167687	2024	SOUTH	O      4364.16
-167687	2024	SOUTH	T      2055.94
+167687	2024	NORTH	G	196410.74
+167687	2024	NORTH	GM	57011.86
+167687	2024	NORTH	I	2007589.88
+167687	2024	NORTH	O	129157.75
+167687	2024	NORTH	T	1.34
+167687	2024	SOUTH	G	7776.89
+167687	2024	SOUTH	GM	172701.92
+167687	2024	SOUTH	I	75168.77
+167687	2024	SOUTH	O	4364.16
+167687	2024	SOUTH	T	2055.24
 */ 
 
 ```
@@ -107,9 +111,9 @@ order by species_stock, discard_source;
 ## Complex Black Sea Bass example - bad
 
 ```sql
- select a.itis_tsn
+select a.itis_tsn
   , a.year
-  , b.species_stock
+  , b.species_estimation_region
   , b.cams_gear_group
   , extract(month from a.date_trip) as month
   , sum(a.cams_discard) discard_lb
@@ -119,14 +123,14 @@ order by species_stock, discard_source;
   , round(sum(a.cams_discard)*0.000453592370, 1) as discard_mt
   , case when sum(a.cams_discard) = 0 then 0
      else round(sqrt(sum(a.cams_discard_variance))/sum(a.cams_discard), 4) end as discard_cv
-from cams_discard_all_years a
-left join cams_discard_strata b
+from cams_garfo.cams_discard_all_years a
+left join cams_garfo.cams_discard_strata b
 on a.strata_used_desc = b.strata_used_desc
  where a.itis_tsn='167687' 
  and a.year = 2019
- group by a.itis_tsn, a.year, b.species_stock, b.cams_gear_group, extract(month from a.date_trip)
- order by species_stock, discard_mt desc;
- -- 366 records with 92.4 metric tons of discards in species_stock = null and cams_gear_group = null
+ group by a.itis_tsn, a.year, b.species_estimation_region, b.cams_gear_group, extract(month from a.date_trip)
+ order by species_estimation_region, discard_mt desc;
+ -- 374 records with 92.5 metric tons of discards in species_estimation_region = null and cams_gear_group = null
 
 ```
 
@@ -137,10 +141,10 @@ with joins as (
     select y.*
     , s.area
     , a.area_type
-    , a.area_name as species_stock
+    , a.species_estimation_region
     , e.cams_gear_group
-    from cams_discard_all_years y
-    left join cams_garfo.cams_subtrip s
+    from cams_garfo.cams_discard_all_years y
+    left join cams_garfo.cams_subtrip s 
     on (y.camsid = s.camsid and y.subtrip = s.subtrip)
     left join cams_garfo.cfg_statarea_stock a
     on (s.area = a.area and y.itis_tsn = a.itis_tsn) 
@@ -153,7 +157,7 @@ with joins as (
 )
 select itis_tsn
   , year
-  , species_stock
+  , species_estimation_region
   , cams_gear_group
   , extract(month from date_trip) as month
   , sum(cams_discard) as discard_lb
@@ -166,9 +170,10 @@ select itis_tsn
 from joins
 group by itis_tsn
   , year
-  , species_stock
+  , species_estimation_region
   , cams_gear_group
   , extract(month from date_trip)
-order by species_stock, discard_mt desc;
--- 359 records with no null species_stock 
+order by species_estimation_region, discard_mt desc;
+-- 367 records with no null species_estimation_region
+
 ```
