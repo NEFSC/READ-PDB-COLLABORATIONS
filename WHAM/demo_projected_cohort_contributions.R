@@ -55,7 +55,7 @@ proj_cbaa <-
          Age = as.numeric(Age),
          Cohort = as.character(Year - Age),
          Cohort = ifelse(Age == mod$env$data$n_ages, "Plus group", Cohort),
-         Cohort = ifelse(Cohort %in% as.character(setdiff(proj$years_full, proj$years)), 
+         Cohort = ifelse(Cohort %in% as.character(setdiff(proj$years_full, proj$years[1:(length(proj$years)-1)])), 
                          "Projected recruits",
                          Cohort),
          Cohort = forcats::fct_relevel(Cohort, "Plus group")) %>%
