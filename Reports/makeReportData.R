@@ -18,7 +18,8 @@
 #'   \item{MT_BRPs - A table of MT BRPs with 95\% CI}
 #'   \item{indices - A table of index time series with associated CVs}
 #'   \item{n_indices - The number of indices in model_MT}
-#'   \item{MT_termyr - A table of estimates and rho-adjusted values for F, SSB, and Recruitment terminal year estimates, associated CVs and the BRP ratio}
+#'   \item{MT_termyr - A table of MT estimates and rho-adjusted values for F, SSB, and Recruitment terminal year estimates, associated CVs and the BRP ratio}
+#'   \item{prior_termyr - A table of prior assessment estimates and rho-adjusted values for F, SSB, and Recruitment terminal year estimates, associated CVs and the BRP ratio}
 #' }   
 
 library(tidyverse)
@@ -241,6 +242,7 @@ makeReportData <- function(model_MT = NULL,
     prior_results <- pullResults_WHAM(model_prior, multiWHAM = multiWHAM[3])
     return_list$prior_BRPs <- prior_results$brps
     return_list$prior_MohnsRho <- prior_results$Mohns_rho
+    return_list$prior_termyr <- prior_results$termyr.ests.cis
   } else{ # Otherwise pull results from model_prior list
     warning("Have not built out options to format prior assessment results if not a WHAM model")
   }

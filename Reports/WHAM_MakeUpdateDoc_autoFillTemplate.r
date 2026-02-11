@@ -133,11 +133,11 @@ if(Rho.adj_MT == FALSE){ # If no retro adjustment
 # Prior assessment 
 Rho.adj_prior <- reportData$prior_retro.signif # Check if retro adjustment done in prior assessment
 if(Rho.adj_prior == FALSE){ # If no retro adjustment
-  if(filter(reportData$MT_termyr, Parameter == "SSB")$est < SSBthreshold){ Bstatus_old <- "overfished" } else{ Bstatus_old <- "not overfished" } # Terminal SSB < SSBthreshold
-  if(filter(reportData$MT_termyr, Parameter == "F")$est > Fthreshold){ Fstatus_old <- "overfishing is occurring" } else{ Fstatus_old <- "overfishing is not occurring" } # Terminal F > Fthreshold
+  if(filter(reportData$prior_termyr, Parameter == "SSB")$est < SSBthreshold){ Bstatus_old <- "overfished" } else{ Bstatus_old <- "not overfished" } # Terminal SSB < SSBthreshold
+  if(filter(reportData$prior_termyr, Parameter == "F")$est > Fthreshold){ Fstatus_old <- "overfishing is occurring" } else{ Fstatus_old <- "overfishing is not occurring" } # Terminal F > Fthreshold
 } else{ # If retro adjustment used
-  if(filter(reportData$MT_termyr, Parameter == "SSB")$est.adj < SSBthreshold){ Bstatus_old <- "overfished" } else{ Bstatus_old <- "not overfished" } # Rho-adjusted terminal SSB < SSBthreshold
-  if(filter(reportData$MT_termyr, Parameter == "F")$est.adj > Fthreshold){ Fstatus_old <- "overfishing is occurring" } else{  Fstatus_old <- "overfishing is not occurring" }  # Rho-adjusted terminal F > Fthreshold
+  if(filter(reportData$prior_termyr, Parameter == "SSB")$est.adj < SSBthreshold){ Bstatus_old <- "overfished" } else{ Bstatus_old <- "not overfished" } # Rho-adjusted terminal SSB < SSBthreshold
+  if(filter(reportData$prior_termyr, Parameter == "F")$est.adj > Fthreshold){ Fstatus_old <- "overfishing is occurring" } else{  Fstatus_old <- "overfishing is not occurring" }  # Rho-adjusted terminal F > Fthreshold
 }
 
 
