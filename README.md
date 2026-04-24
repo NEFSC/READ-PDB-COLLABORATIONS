@@ -70,6 +70,7 @@ See README files within each folder for detailed descriptions of the files they 
 | CAMS | Catch Accounting and Monitoring System related tips and tricks |
 | Reference points and projections | Contains functions to conduct P* projections for the MAFMC stocks and advanced reference point analysis |
 | Reports | Contains support functions to make management track assessment reports (e.g., those on the [stock assessment portal](https://apps-nefsc.fisheries.noaa.gov/saw/sasi.php) |
+| ROracle_keypass_example | Example code to use package keypass to securely store your Oracle connection info |
 | WHAM | Contains WHAM support functions and use examples that are not yet integrated into the WHAM R package, you may also consider [submitting well-tested functions to WHAM directly.](https://github.com/timjmiller/wham/blob/80b2b727fb62e09fb880267fcc648cbdb3a16882/.github/CONTRIBUTING.md) |
 | stockEff | Contains functions to interface with stockEff (e.g., pull information from or assist in loading new stocks/settings) |
 | Beamer Presentation w/ NOAA logo | Code to create Beamer presentation (pdf) with Table of Contents indicator in the header, with fancy 'NOAA branding'. Folder for this is now in the repo.|
