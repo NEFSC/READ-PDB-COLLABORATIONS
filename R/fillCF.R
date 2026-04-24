@@ -106,6 +106,7 @@
 #'   \item{regions_missing - Table of AREAs that appear in oracle data but not in tab_regions$stat_area argument for this function (may be missing blocking)}
 #' }
 #' 
+#' @export
 #'
 #' @examples
 #' \dontrun{
