@@ -92,10 +92,13 @@
 #'        and manage the connection/disconnection automatically. If a connection 
 #'        is provided, the user is responsible for closing it after the function executes.
 #'         
-#' NOTE: tab_blocks$block_opt = checkLENGTHS will NOT work unless connected to the VPN
-#' NOTE: ALK_HOLES, and EXCLUSIONS tabs are optionally populated by this function and may need to be filled externally if tab_alk and tab_exclusions arguments are not used to fill gaps.
-#' NOTE: If you receive the following error, then the .xlsx file by the provided name already exists and can't be overwritten: [ERROR] workbook_close(): Error creating 'outfile.xlsx'. System error = Permission denied Error: Error in libxlsxwriter: 'Error creating output xlsx file. Usually a permissions error.'
-#' NOTE: If you find NAs in the REGION_ID for the BLOCKS tab, then there was a stat area in the {schema}.mv_cf_stock_data_length_o product that was not provided in the tab_regions$stat_areas argument.
+#' \itemize{
+#' \item{NOTE: tab_blocks$block_opt = checkLENGTHS will NOT work unless connected to the VPN}
+#' \item{NOTE: ALK_HOLES, and EXCLUSIONS tabs are optionally populated by this function and may need to be filled externally if tab_alk and tab_exclusions arguments are not used to fill gaps.}
+#' \item{NOTE: If you receive the following error, then the .xlsx file by the provided name already exists and can't be overwritten: [ERROR] workbook_close(): Error creating 'outfile.xlsx'. System error = Permission denied Error: Error in libxlsxwriter: 'Error creating output xlsx file. Usually a permissions error.'}
+#' \item{NOTE: If you find NAs in the REGION_ID for the BLOCKS tab, then there was a stat area in the {schema}.mv_cf_stock_data_length_o product that was not provided in the tab_regions$stat_areas argument.}
+#' }
+#' 
 #'
 #' @return A populated .xlsx template and a list containing the following:
 #' \itemize{
@@ -213,7 +216,6 @@
 #' }
 #' 
 #' 
-#' @importFrom magrittr |>
 #' @importFrom dplyr mutate filter select group_by summarise left_join bind_rows rename arrange desc case_when reframe n_distinct ungroup any_of all_of across relocate
 #' @importFrom tidyr expand_grid unnest
 #' @importFrom stringr str_pad str_trim
