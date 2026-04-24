@@ -37,7 +37,8 @@ A list containing the following and saved as an RDS object named "reportData", a
   \item{MT_BRPs - A table of MT BRPs with 95\% CI}
   \item{indices - A table of index time series with associated CVs}
   \item{n_indices - The number of indices in model_MT}
-  \item{MT_termyr - A table of estimates and rho-adjusted values for F, SSB, and Recruitment terminal year estimates, associated CVs and the BRP ratio}
+  \item{MT_termyr - A table of MT estimates and rho-adjusted values for F, SSB, and Recruitment terminal year estimates, associated CVs and the BRP ratio}
+  \item{prior_termyr - A table of prior assessment estimates and rho-adjusted values for F, SSB, and Recruitment terminal year estimates, associated CVs and the BRP ratio}
 }
 }
 \description{

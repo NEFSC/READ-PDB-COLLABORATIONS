@@ -13,12 +13,13 @@
 #' mytest <- rhoadjustWHAMproj(modproj, rho=0) # make sure get same projected SSB and catch as WHAM did, if not then stop here
 #' mytable15 <- rhoadjustWHAMproj(modproj, rho=0.15) # adjust first year of projections using an input rho value
 #' mytablerhoSSB <- rhoadjustWHAMproj(modproj, rho=NULL) # use rho for SSB - assumes retro has been run and saved in modproj object
+#' @export
 
 
 rhoadjustWHAMproj <- function(modproj, rho){
   
-  library(dplyr)
-  library(wham)
+#   library(dplyr)
+#   library(wham)
   
   # check for projections in modproj object
   if (length(modproj$years_full) == length(modproj$years)) return("Must have projections in modproj object.")

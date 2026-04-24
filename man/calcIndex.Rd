@@ -11,7 +11,8 @@ calcIndex(
   doLogin = FALSE,
   surveyTowData = NULL,
   calibration = "B_CAL",
-  summary_strata = NULL
+  summary_strata = NULL,
+  swept_area = NULL
 )
 }
 \arguments{
@@ -54,6 +55,12 @@ calcIndex(
 }}
 
 \item{summary_strata}{A vector of strata for which strata-specific mean weight and numbers (by year, season, survey) should be returned in the strata_means_summary object, default returns means for all strata.}
+
+\item{swept_area}{DRAFT ONLY: Option only available for IndexType == "Default". A list containing the following to calculate a swept_area biomass index, if NULL then relative index of abundance calculated as in stockEff. Default = NULL.
+\itemize{
+  \item{catchability -  A number for catchability applied to all ages/lengths when calculating an index}
+  \item{length_condition - A string containing a conditional statement to select the LENGTH used in index calculations (e.g. "LENGTH >=30" includes fish greater or equal to 30cm in index), must include a reference to "LENGTH" variable}
+}}
 }
 \value{
 A list containing: 
@@ -87,6 +94,8 @@ cod <- calcIndex(species_itis = 164712,
                             IndexType = "Default",
                             doLogin = FALSE,
                             calibration = "B_CAL")
+                            swept_area = list(catchability = 1,
+                            length_condition = "LENGTH >= 30")
 
 plaice <- calcIndex(species_itis = 172877,
                     stock_abbrev = "UNIT",

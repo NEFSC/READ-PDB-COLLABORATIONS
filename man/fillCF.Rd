@@ -2,7 +2,7 @@
 % Please edit documentation in R/fillCF.R
 \name{fillCF}
 \alias{fillCF}
-\title{Fill CF specification template for stockEff}
+\title{Fill CF specification template for STOCKEFF}
 \usage{
 fillCF(
   species_itis = NULL,
@@ -11,12 +11,18 @@ fillCF(
   assessment_year = NULL,
   data_years = NULL,
   sex_type = "NONE",
-  tab_blocks = list(autofillLW = FALSE, mkt_missing = "keep", check_missing = FALSE),
+  tab_blocks = list(autofillLW = FALSE, mkt_missing = "keep", check_missing = FALSE,
+    block_opt = "ANNUAL", minLenSample = 1),
   tab_prorate = NULL,
   tab_regions = NULL,
   tab_lw = NULL,
   tab_sex = NULL,
-  outfile = NULL
+  tab_impute = NULL,
+  tab_alk = list(fill_alk = FALSE, borrow_alk_years = FALSE, source = "both"),
+  tab_exclusions = list(len_range = NULL, age_range = NULL),
+  schema = "STOCKEFF",
+  outfile = NULL,
+  conn = NULL
 )
 }
 \arguments{
@@ -28,7 +34,7 @@ fillCF(
 
 \item{assessment_year}{The year in which the assessment will be reviewed, no default.}
 
-\item{data_years}{The range of years for which catch data should be formatted for stockEff CF excel template, no default.}
+\item{data_years}{The range of years for which catch data should be formatted for STOCKEFF CF excel template, no default.}
 
 \item{sex_type}{A string describing the sex type for which data should be pulled (this shows up in the web address for STOCKEFF products), default = "NONE". Common options include "NONE", "MALE", "FEMALE", "UNSEXED"}
 
@@ -42,7 +48,7 @@ fillCF(
           if = "QUARTER", one block for each quarter,
           if = "SEMESTER", one block for each semester,
           if = "ANNUAL", one block per year for each market category
-          if = "checkLENGTHS", Assumes monthly blocks were submitted to stockEff, checks the number of monthly length samples from biosamp_summary.csv to determine smallest block supported by data for each market category and year. Must also provide minLenSample argument if this option is used.}
+          if = "checkLENGTHS", Assumes monthly blocks were submitted to STOCKEFF, checks the number of monthly length samples from biosamp_summary.csv to determine smallest block supported by data for each market category and year. Must also provide minLenSample argument if this option is used.}
   \item{minLenSample - A number specifying the minimum number of length sampels required to support a given block for a year and market category, only required if tab_blocks$block_opt == "checkLENGTHS"}
   \item{autofillLW - A boolean, if TRUE fills LW_ID based on complete overlap with LW months and years, if FALSE leaves NAs for blocks without a perfect match to LW month and year definition, default = FALSE}
   \item{mkt_missing - A string to govern years where 1+ market categories not length sampled, default = "keep":
@@ -56,10 +62,14 @@ fillCF(
   \item{turnOff - A vector of years for which unclassified landings should NOT be prorated, default prorates for all data_years.}
 }}
 
-\item{tab_regions}{A list providing the following information to populate the REGIONS tab: (NOTE: code is less well tested with >1 region)
+\item{tab_regions}{A list providing the following information to populate the REGIONS tab:
 \itemize{
-  \item{stat_areas - A list of stat area vectors by region, no default. Example: list(c(510, 511), c(512, 513)) assumes 2 regions each containing 2 stat areas}
-  \item{region_custom - A optional custom matrix containing "REGION_ID", "AREA", and "YEAR" columns, not required if stat_areas object provided}
+  \item{stat_areas - A list of stat area vectors by region. Example: list("1" = c(511, 512))}
+  \item{region_custom - An optional data.frame/matrix for complex cases. 
+        Example: data.frame(AREA = c(511, 512, 511), 
+                           REGION_ID = c("1", "1", "2"), 
+                           YEAR = c(2020, 2020, 2021))
+        This is useful if an AREA changes REGION_ID over time.}
 }}
 
 \item{tab_lw}{A matrix or data.frame containing the following named columns of information for each LW data source. Currently only supports blocks with types, start and end months that match LW_PARAMS and are consistent across all years
@@ -81,93 +91,170 @@ fillCF(
   \item{end_yr - The end year for CF data, default = last year in data_years.}
 }}
 
-\item{outfile}{A string for the final exported file name, does NOT need to include .xlsx extention. No default.
+\item{tab_impute}{A list providing rules for filling sampling gaps in the LENGTH_IMPUTATIONS tab:
+\itemize{
+  \item{borrow_from_region - A named list defining spatial donor relationships. 
+        Example: list("5" = "6") means if Region 5 has a sampling hole, 
+        borrow the length-frequency distribution from Region 6 for that same 
+        Year and Market Category.}
+  \item{borrow_from_time - A boolean. If TRUE, triggers the constrained temporal 
+        hierarchy if spatial borrowing fails or is not defined. 
+        The hierarchy follows: Same Semester (for Quarter holes) > 
+        Same Year (for Semester holes) > Adjacent Years (for Year holes).}
+}}
 
-NOTE: tab_blocks$block_opt = checkLENGTHS will NOT work unless connected to the VPN
-NOTE: ALK_HOLES, EXCLUSIONS, and LENGTH_IMPUTATIONS tabs are not populated by this function but placeholders are put in the resulting output file so that they can be filled externally as needed.
-NOTE: If you receive the following error, then the .xlsx file by the provided name already exists and can't be overwritten: [ERROR] workbook_close(): Error creating 'outfile.xlsx'. System error = Permission denied Error: Error in libxlsxwriter: 'Error creating output xlsx file. Usually a permissions error.'
-NOTE: If you find NAs in the REGION_ID for the BLOCKS tab, then there was a stat area in the stockeff_pre_prod.mv_cf_stock_data_length_o product that was not provided in the tab_regions$stat_areas argument.}
+\item{tab_alk}{A list providing rules for filling gaps in the ALK_HOLES tab:
+\itemize{
+  \item{fill_alk - A boolean. If TRUE, identifies lengths present in landings that 
+        lack corresponding age data and attempts to fill them using hierarchical borrowing.}
+  \item{borrow_alk_years - A boolean. Default = FALSE. If TRUE, allows the ALK fill 
+        logic to look at adjacent years (Year - 1 and Year + 1) as a final fallback 
+        if no regional or survey ages are found for the current year.}
+  \item{source - options are "commercial", "survey" or (default) "both". Provides the option of using only
+       one of the available sources for age data in hole filling.}     
+}}
+
+\item{tab_exclusions}{An optional (default = NULL) list defining automated filters to remove non-representative biological records:
+\itemize{
+  \item{len_range - A numeric vector of length 2, e.g., c(10, 100). Any fish with a LENGTH 
+        strictly less than the first value or strictly greater than the second value 
+        will be added to the EXCLUSIONS tab.}
+  \item{age_range - A numeric vector of length 2, e.g., c(1, 20). Any fish with an AGE 
+        outside this range will be excluded. This is a powerful tool for removing 
+        extreme outliers that may be age-reading or data-entry errors.}
+}}
+
+\item{schema}{Set to "STOCKEFF_PRE_PROD" if using pre production data for assembly. Default is "STOCKEFF"}
+
+\item{outfile}{A string for the final exported file name, does NOT need to include .xlsx extention. No default.}
+
+\item{conn}{A DBI or ROracle connection object to the NEFSC Oracle database. 
+       If NULL (default), the function will prompt for credentials via rstudioapi 
+       and manage the connection/disconnection automatically. If a connection 
+       is provided, the user is responsible for closing it after the function executes.
+        
+\itemize{
+\item{NOTE: tab_blocks$block_opt = checkLENGTHS will NOT work unless connected to the VPN}
+\item{NOTE: ALK_HOLES, and EXCLUSIONS tabs are optionally populated by this function and may need to be filled externally if tab_alk and tab_exclusions arguments are not used to fill gaps.}
+\item{NOTE: If you receive the following error, then the .xlsx file by the provided name already exists and can't be overwritten: [ERROR] workbook_close(): Error creating 'outfile.xlsx'. System error = Permission denied Error: Error in libxlsxwriter: 'Error creating output xlsx file. Usually a permissions error.'}
+\item{NOTE: If you find NAs in the REGION_ID for the BLOCKS tab, then there was a stat area in the {schema}.mv_cf_stock_data_length_o product that was not provided in the tab_regions$stat_areas argument.}
+}}
 }
 \value{
-A list containing the following:
+A populated .xlsx template and a list containing the following:
 \itemize{
   \item{mkt_missing_yr - A table of market categories years for which 1+ market categories were not sampled where 1+ market categories were not sampled}
   \item{regions_missing - Table of AREAs that appear in oracle data but not in tab_regions$stat_area argument for this function (may be missing blocking)}
 }
-# BSB SOUTH example
-# First grab LW info as processed for RT
-load(here::here("Data_workflow/BSBtest_Length_Weight_Data.RDATA")) # Load LW example for South BSB stock
-stock = "SOUTH"
-lm.obj <- get(paste("lm",tolower(stock),"sem.yrbin", sep='.'))
-lm.param.sem <- vector('list',length(lm.obj))
-names(lm.param.sem) <- names(lm.obj)
-
-for (sem in names(lm.param.sem))
-{
-  # sem <- names(lm.param.sem)[1]
-  x <- lm.obj[[sem]]
-  lm.mat <- data.frame(do.call(rbind, 
-                               lapply(x, function(y) {
-                                 c( y$coefficients["log(LENGTH)"],
-                                    y$coefficients["(Intercept)"]
-                                 )
-                               } ))
-  )
-  colnames(lm.mat) <- c('Log.length','Intercept')
-  lm.mat$YrBin <- rownames(lm.mat)
-  rownames(lm.mat) <- NULL
-  lm.mat$Semester <- sem  
-  lm.param.sem[[sem]] <- lm.mat
-}
-lm.params <- do.call(rbind, lm.param.sem)
-rownames(lm.params) <- NULL
-
-### Create LW_Params table
-lw.params <- tibble(lm.params) %>%
-  mutate(
-    ALPHA = exp(lm.params$Intercept), .before=1
-  ) %>%
-  select(-Intercept) %>%
-  rename(BETA = Log.length) %>%
-  unite("SOURCE", Semester:YrBin, remove=FALSE) %>%
-  mutate(LW_TYPE = 'SEMESTER',
-         LW_ID = 1:n(),
-         .before = YrBin
-  ) %>%
-  mutate(YEAR_START = c(1989, 2002, 2012, 1989, 2002, 2012), # 1989 start years were calculated with data from 1992-2001 and used to fill 1989-1991 since no samples available for these early years
-         YEAR_END = c(2001, 2011, 2021, 2001, 2011, 2021),
-         MONTH_START = c(1,1,1,7,7,7),
-         MONTH_END = c(6,6,6,12,12,12))
-
-fillCF(species_itis = 167687,
- stock_abbrev = "SOUTH",
- assessment_abbrev = "RT",
- assessment_year = 2022,
- data_years = 1989:2021,
- sex_type = "NONE",
- tab_regions = list(stat_areas = list(c('614', '615', '621', '622', '623', '624', '625', '626', '627', '628', '629', '631', '632', '633', '634', '635', '636', '637', '638', '639', '640'))),
- tab_lw = data.frame(ALPHA = lw.params$ALPHA,
-BETA = lw.params$BETA,
-SOURCE = lw.params$SOURCE,
-LW_TYPE = lw.params$LW_TYPE,
-LW_ID = lw.params$LW_ID, 
-MONTH_START = lw.params$MONTH_START,
-MONTH_END = lw.params$MONTH_END,
-YEAR_START = lw.params$YEAR_START,
-YEAR_END = lw.params$YEAR_END),
- tab_blocks = list(nespp4 = c('3350', '3351', '3352', '3353', '3355'),
- block_opt = "SEMESTER",
- autofillLW = TRUE),
-outfile =  here::here("test_SOUTH_BSB_CFfill"))
-
-originalBLOCKS <- read.csv(here::here("Data_workflow", "BSBtest_CF_Specification.BLOCKS.167687.SOUTH.csv"))
-originalBLOCKS$NESPP4 <- as.character(originalBLOCKS$NESPP4)
-originalBLOCKS$REGION_ID <- as.character(originalBLOCKS$REGION_ID)
-originalBLOCKS$LW_ID <- as.character(originalBLOCKS$LW_ID)
-testBLOCKS <- read_excel(here::here("test_SOUTH_BSB_CFfill.xlsx"), sheet = "BLOCKS")
-# testBLOCKS$REGION_ID[nrow(testBLOCKS)] <- "2" # If uncommented makes 1 row not match in testBLOCKS, shows up in tidylog below
-left_join(testBLOCKS, originalBLOCKS, by = colnames(originalBLOCKS))
 }
 \description{
-Fill CF specification template for stockEff
+Fill CF specification template for STOCKEFF
+}
+\examples{
+\dontrun{
+# Example call for GB Cod using spatial and temporal borrowing
+fillCF(
+  species_itis = 164712,
+  stock_abbrev = "GBK",
+  assessment_abbrev = "MT",
+  assessment_year = 2024,
+  data_years = 2019:2023,
+  tab_regions <- list(
+    stat_areas = list(
+      "1" = c(464, 522, 523, 524, 525, 561, 562, 551, 552, 542, 543)
+    ))
+# for 2 regions
+# tab_regions <- list(
+#     stat_areas = list(
+#       "1" = c(511, 512, 513),
+#       "2" = c(521, 522, 525)
+#       )
+#     )
+ tab_blocks <-  list(
+  nespp4 = c(LARGE = 811, Market = 813, Scrod = 814),
+  minLenSample = 100,
+  block_opt = "checkLENGTHS",
+  autofillLW = TRUE,
+  mkt_missing = "keep",
+  autofillLW = T
+ ) 
+  tab_impute = list(
+    borrow_from_region = list("1" = "2"),
+    borrow_from_time = TRUE
+  ),
+  outfile = "GB_Cod_Specifications"
+)
+
+
+#mackerel example using exclusions
+species_itis = 172414
+stock_abbrev = "UNIT"
+assessment_abbrev = "MT"
+assessment_year = 2025
+data_years = 2018:2019 # small subset for testing
+sex_type = "NONE"
+tab_regions <- list(
+  stat_areas = list(
+    "1" = c(464,465,467,468,510,511,512,513,514,515,520,521,522,523,524,525,526,
+            530,533,534,537,538,539,541,542,543,551,552,560,561,562,600,610,611,
+            612,613,614,615,616,621,622,623,624,625,626,627,628,629,631,632,633,
+            634,635,636,637,638,639,640,0
+    )
+  )
+)
+
+#extract lw eq. from STOCKEFF
+lwQry <- glue::glue("select * from stockeff_pre_prod.i_cf_stock_lw_params_s where species_itis = {species_itis}
+                    and stock_abbrev = '{stock_abbrev}' and assessment_abbrev = '{assessment_abbrev}'") 
+fillLW <- ROracle::dbGetQuery(conn,lwQry)
+tab_lw = data.frame(ALPHA = fillLW$ALPHA,
+                    BETA = fillLW$BETA,
+                    SOURCE = fillLW$SOURCE,
+                    LW_TYPE = fillLW$LW_TYPE,
+                    LW_ID = fillLW$LW_ID,
+                    MONTH_START = c(1,7),
+                    MONTH_END = c(6,12),
+                    YEAR_START = rep(2000,2),
+                    YEAR_END = rep(2024,2))
+tab_blocks <-  list(nespp4 = c(MEDIUM = 2123, SMALL = 2122, LARGE = 2121, UNCLASSIFIED =2120),
+                    minLenSample = 500,
+                    block_opt = "checkLENGTHS",
+                    autofillLW = TRUE,
+                    mkt_missing = "keep")
+
+tab_impute = list(
+  #borrow_from_region = list("1" = "2", "2" = "1"), #only valid for stocks with more than one region!
+  borrow_from_time = TRUE # Flag to trigger the temporal fallback
+)
+
+tab_exclusions = list(len_range = c(10,35))
+
+outfile = file.path("ExampleCFspecs")
+if(!dir.exists("ExampleAutoCFspecs")) dir.create("ExampleAutoCFspecs")
+outfile = file.path("ExampleAutoCFspecs",glue::glue("CF_specification_load_{species_itis}_{stock_abbrev}_{assessment_year}"))
+
+tab_prorate = NULL
+tab_sex = NULL
+
+fillCF(species_itis = species_itis,
+       stock_abbrev = stock_abbrev,
+       assessment_abbrev = assessment_abbrev,
+       assessment_year = assessment_year,
+       data_years = data_years,
+       sex_type = sex_type,
+       tab_regions = tab_regions, 
+       tab_lw = tab_lw,           
+       tab_blocks = tab_blocks,
+       outfile = outfile,
+       tab_prorate = tab_prorate,
+       tab_sex = tab_sex,
+       tab_impute = tab_impute,
+       tab_alk = tab_alk,
+       tab_exclusions = tab_exclusions,
+       conn = conn
+)
+
+}
+
+
 }
