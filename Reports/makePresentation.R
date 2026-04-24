@@ -1,5 +1,5 @@
-# Generic R code to pull all figures from a folder into a powerpoint
-#' @description By default this code generates a PowerPoint presentation including all .png files in the specified plotStorage directory. Slides are labeled numerically
+#' @title makePresentation 
+#' @description Generic R code to pull all figures from a folder into a powerpoint. By default this code generates a PowerPoint presentation including all .png files in the specified plotStorage directory. Slides are labeled numerically
 #' 
 #' @param plotStorage A file path to the folder containing all figures to include in a powerpoint, this folder can contain sub-directories whose images will also be included
 #' @param figureExtension A string specifying the file extension for the type of figures to include, default = ".png"
