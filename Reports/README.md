@@ -8,5 +8,6 @@ This sub-directory contains functions to support report and presentation generat
 | calc.uncertainty.R     |  Support function for makeReportData.R, calculates uncertainty bounds log-transformed data for use in MT reporting for a WHAM model | Amanda Hart, Kiersten Curti |
 | create.brp.text.R      | Support function for makeReportData.R, generates text for reporting BRPs | Amanda Hart, Kiersten Curti
 | makeMTslides.R | Generates draft MT powerpoint slides with model fit/diagnostic plots for a WHAM model | Amanda Hart |
+| makePresentation.R | Pulls all figures from a folder and adds to powerpoint slides, useful to pull all diagnostic plots into backup slides. | Amanda Hart |
 | makeReportData.R | Extracts MT report data from a WHAM model and returns an object compatible for use in MT report template | Amanda Hart |
 | pullResults_WHAM.R | Support function for makeReportData.R to pull WHAM model results for use in MT reporting. | Amanda Hart |
