@@ -215,7 +215,6 @@
 #' }
 #' 
 #' 
-#' @importFrom magrittr |>
 #' @importFrom dplyr mutate filter select group_by summarise left_join bind_rows rename arrange desc case_when reframe n_distinct ungroup any_of all_of across relocate
 #' @importFrom tidyr expand_grid unnest
 #' @importFrom stringr str_pad str_trim
@@ -227,6 +226,8 @@
 #' @importFrom purrr map_lgl imap_dfr
 #' @importFrom tidyr replace_na
 #' 
+# @importFrom magrittr |>  # This function doesn't appear to be an export of magrittr but instead is a base R function so shouldn't need to be imported
+
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
