@@ -924,7 +924,7 @@ fillCF <- function(species_itis = NULL,
     else cli::cli_alert_info("{y}: Empty.")
   })
   
-  if(nrow(tab_ALK_HOLES) > 0 || nrow(alk_unfilled) > 0) {
+  if(nrow(tab_ALK_HOLES) > 0 || (tab_alk$fill_alk == TRUE & nrow(alk_unfilled) > 0)) {
     
     # Summary of what WAS filled
     alk_summary <- tab_ALK_HOLES |> 
@@ -947,7 +947,7 @@ fillCF <- function(species_itis = NULL,
     }
     
     # Report the failures
-    if(nrow(alk_unfilled) > 0) {
+    if(tab_alk$fill_alk == TRUE & nrow(alk_unfilled) > 0) {
       # Count unique "holes" (Yr/Mkt/Reg/Len/Sem combinations)
       num_holes <- nrow(alk_unfilled)
       cli::cli_alert_danger("{.strong {num_holes}} length classes remain unfilled (no biological samples found in any tier).")
