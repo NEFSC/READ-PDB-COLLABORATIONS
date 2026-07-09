@@ -779,6 +779,8 @@ fillCF <- function(species_itis = NULL,
                       BLOCK_ID, LENGTH_UOM, LENGTH, AGE_UOM, AGE, 
                       NO_AT_AGE, NESPP4, ASSESSMENT_ABBREV, SA_YEAR, SOURCE)
     }
+  } else{
+    alk_unfilled <- NA # Required for subsequent check, will not describe remaining holes unless fill_alk == TRUE
   }
   
   ### EXCLUSIONS tab
