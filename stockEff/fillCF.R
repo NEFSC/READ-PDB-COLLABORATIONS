@@ -924,7 +924,7 @@ fillCF <- function(species_itis = NULL,
     else cli::cli_alert_info("{y}: Empty.")
   })
   
-  if(nrow(tab_ALK_HOLES) > 0 || (tab_alk$fill_alk == TRUE & nrow(alk_unfilled) > 0)) {
+  if(nrow(tab_ALK_HOLES) > 0 || tab_alk$fill_alk == TRUE) { # Logic changed so always run summary if tab_ALK_HOLES was populated OR borrowing attempted (removes dependence on alk_unfilled which is only generated when borrowing attempted)
     
     # Summary of what WAS filled
     alk_summary <- tab_ALK_HOLES |> 
