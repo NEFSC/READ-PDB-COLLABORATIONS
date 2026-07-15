@@ -1,0 +1,329 @@
+---
+title: "Survey Sampling Demo"
+author: "Chris Legault and Gemini"
+date: today
+date-format: long
+format:
+ html:
+    code-fold: true
+    embed-resources: true 
+    toc: true
+warning: false
+---
+
+## BLUF
+
+Doubling the number of stations in our survey will only slightly decrease the uncertainty in the stratified mean estimate. However, as stocks drop to near detection levels, the increased sampling may become important.
+
+## Background
+
+Jon Hare asked "what if we increased station density in strata within the “fishery footprints” of GB cod and haddock as an experiment". His initial questions were
+
+1. Does changing station density in a strata bias a strata abundance estimate? (what if we doubled stations in some strata)
+2. Does changing station density in a strata increase the precision of a strata abundance estimate? (what if we doubled stations in some strata)
+3. What could an experimental design of the effect of station density on a strata abundance estimate look like?
+4. Could such an experiment be embedded in the trawl survey or need to be done separately?
+5. Other questions or thoughts that I am not thinking about?
+
+Gemini was used to attempt to address these questions. 
+
+## Basic sampling theory
+
+Gemini prompt: 
+
+Hi Gemini. I would like you to write some R code using tidyverse approach that demonstrates the relationship between sample size and coefficient of variation of the stratified mean for a situation similar to our bottom trawl survey. We have large areas with relatively few samples collected in each strata. However, we think there is sufficient sampling to detect large scale changes in the population.
+
+Gemini response: 
+
+Bottom trawl surveys are classic examples of this statistical challenge: you are dealing with massive marine areas, highly patchy species distributions (which means high variance), and a relatively sparse number of tows per stratum due to ship time constraints.
+
+The good news is that stratified random sampling is incredibly resilient. Even when individual stratum sample sizes are small, the aggregate stratified mean leverages the total area weights, often resulting in an overall Coefficient of Variation (CV) low enough to reliably track major population expansions or crashes.
+
+Here is a complete, tidyverse-centric R script that simulates this exact relationship. It calculates the theoretical CV across a gradient of sample sizes and plots the results to show where you hit the point of diminishing returns.
+
+```{r}
+# Load required libraries
+library(tidyverse)
+
+# 1. Define your survey strata characteristics
+# We simulate a typical bottom trawl survey with large areas,
+# high variance (patchy catch), and varying true mean abundances.
+strata_scenarios <- tibble(
+  stratum = c("Deep Basin", "Inshore Flats", "Gully", "Shelf Edge", "Central Plain"),
+  area_km2 = c(5000, 8000, 2000, 3500, 12000),   # Large areas
+  true_mean_catch = c(45, 12, 85, 30, 8),       # Highly variable across habitats
+  true_sd = c(35, 15, 65, 22, 10)               # High standard deviation (patchiness)
+) %>% 
+  # Calculate stratum weights (W_h) based on relative area
+  mutate(W_h = area_km2 / sum(area_km2))
+
+# Calculate the true overall stratified mean for the whole population
+true_strat_mean <- sum(strata_scenarios$W_h * strata_scenarios$true_mean_catch)
+
+
+# 2. Evaluate CV across a range of sample sizes per stratum
+# We look at sample sizes from 2 to 20 to see the effect of low sampling.
+cv_analysis <- expand_grid(
+  n_per_stratum = 2:20,
+  stratum = strata_scenarios$stratum
+) %>% 
+  # Bring in the strata characteristics
+  left_join(strata_scenarios, by = "stratum") %>% 
+  # Calculate the variance component for each stratum: (W_h^2 * sd^2) / n
+  mutate(stratum_var_contribution = (W_h^2 * true_sd^2) / n_per_stratum) %>% 
+  # Aggregate across all strata for each sample size level
+  group_by(n_per_stratum) %>% 
+  summarize(
+    total_survey_tows = sum(n_per_stratum),
+    strat_variance = sum(stratum_var_contribution),
+    strat_se = sqrt(strat_variance),
+    strat_cv = strat_se / true_strat_mean
+  )
+
+
+# 3. Plot the relationship
+ggplot(cv_analysis, aes(x = n_per_stratum, y = strat_cv)) +
+  geom_line(color = "steelblue", size = 1.2) +
+  geom_point(color = "darkblue", size = 2) +
+  # Add a common management threshold benchmark (e.g., CV = 0.20 or 20%)
+  geom_hline(yintercept = 0.20, linetype = "dashed", color = "tomato", alpha = 0.8) +
+  annotate("text", x = 16, y = 0.22, label = "Target Precision (CV = 0.20)", color = "tomato") +
+  # Formatting text and axes
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1), limits = c(0, NA)) +
+  scale_x_continuous(breaks = seq(2, 20, by = 2)) +
+  labs(
+    title = "Stratified Mean CV vs. Sample Size per Stratum",
+    subtitle = "Demonstrating survey performance for large-scale population monitoring",
+    x = "Number of Tows per Stratum (n)",
+    y = "Overall Survey CV (%)",
+    caption = paste0("Total survey size ranges from ", min(cv_analysis$total_survey_tows), 
+                     " to ", max(cv_analysis$total_survey_tows), " total tows.")
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+```
+
+How This Demonstrates Your Situation
+
+*  The Power of Weights ($W_h$): In the code, the variance contribution of each stratum is scaled by its squared area weight (W_h^2). Because you are averaging across multiple large strata, the high variability of individual tows gets "washed out" faster than you might intuitively expect.
+*  The "Elbow" of the Curve: When you run the plot, you will see a steep drop in CV moving from $n = 2$ to $n = 5$, after which the curve starts flattening significantly. This perfectly illustrates your point: even with relatively few samples per stratum (e.g., 4 to 6 tows), the overall survey CV often drops below 20%.
+*  Detecting Large-Scale Changes: A total survey CV of 15% to 20% is generally considered more than adequate in fisheries science to detect major, large-scale shifts in biomass, even if you don't have the statistical power to say precisely what is happening inside a single stratum.
+
+Would you find it helpful to expand this into a power analysis simulation to see the exact percentage change in biomass your current sample size can statistical detect?
+
+I replied yes please.
+
+Gemini response: 
+
+Expanding this into a simulation-based power analysis is a fantastic way to back up your intuition with hard numbers.
+
+By simulating hundreds of hypothetical surveys, we can determine the exact "tipping point"—the minimum percentage change in overall population biomass that your current sparse sampling design can reliably detect (using the standard 80% statistical power benchmark).
+
+The beauty of the tidyverse approach here is that we can run a massive simulation with thousands of iterations entirely vectorized using expand_grid(), completely avoiding slow and clunky for loops.
+
+```{r}
+# 1. Define your baseline survey strata (same as before)
+strata_baseline <- tibble(
+  stratum = c("Deep Basin", "Inshore Flats", "Gully", "Shelf Edge", "Central Plain"),
+  area_km2 = c(5000, 8000, 2000, 3500, 12000),
+  mean_baseline = c(45, 20, 80, 40, 15),   # Adjusted slightly to ensure positive bounds
+  sd_baseline = c(25, 10, 40, 18, 7)
+) %>% 
+  mutate(W_h = area_km2 / sum(area_km2))
+
+# 2. Set up the simulation parameters
+n_tows_per_stratum <- 6   # Adjust this to match your exact current sampling design
+n_simulations <- 500     # Number of mock surveys to run per effect size
+effect_sizes <- seq(0, 0.60, by = 0.10) # Testing 0% to 60% population increases
+
+# 3. Build a massive vectorized grid of all tows across all simulations
+set.seed(42) # For reproducibility
+sim_tows <- expand_grid(
+  effect_size = effect_sizes,
+  sim_id = 1:n_simulations,
+  stratum = strata_baseline$stratum,
+  tow_id = 1:n_tows_per_stratum
+) %>% 
+  left_join(strata_baseline, by = "stratum") %>% 
+  # Simulate individual catch data for Year 1 (Baseline) and Year 2 (Altered)
+  mutate(
+    catch_year1 = rnorm(n(), mean = mean_baseline, sd = sd_baseline),
+    catch_year2 = rnorm(n(), mean = mean_baseline * (1 + effect_size), sd = sd_baseline)
+  )
+
+# 4. Aggregate individual tows to calculate stratified means & variances
+sim_survey_results <- sim_tows %>% 
+  group_by(effect_size, sim_id, stratum, W_h) %>% 
+  summarize(
+    mean_y1 = mean(catch_year1),
+    var_y1  = var(catch_year1),
+    mean_y2 = mean(catch_year2),
+    var_y2  = var(catch_year2),
+    .groups = "drop"
+  ) %>% 
+  # Combine strata using area weights for overall survey estimates
+  group_by(effect_size, sim_id) %>% 
+  summarize(
+    strat_mean_y1 = sum(W_h * mean_y1),
+    strat_var_y1  = sum((W_h^2 * var_y1) / n_tows_per_stratum),
+    strat_mean_y2 = sum(W_h * mean_y2),
+    strat_var_y2  = sum((W_h^2 * var_y2) / n_tows_per_stratum),
+    .groups = "drop"
+  ) %>% 
+  # Run a Z-test/t-test equivalent on the difference between Year 1 and Year 2
+  mutate(
+    mean_diff = strat_mean_y2 - strat_mean_y1,
+    se_diff   = sqrt(strat_var_y1 + strat_var_y2),
+    z_stat    = mean_diff / se_diff,
+    # Was the change statistically significant (alpha = 0.05)?
+    significant = abs(z_stat) > 1.96
+  )
+
+# 5. Calculate statistical power (proportion of significant detections)
+power_analysis <- sim_survey_results %>% 
+  group_by(effect_size) %>% 
+  summarize(power = mean(significant))
+
+# 6. Plot the Power Curve
+ggplot(power_analysis, aes(x = effect_size, y = power)) +
+  geom_line(color = "darkgreen", size = 1.2) +
+  geom_point(color = "darkgreen", size = 2.5) +
+  # Add the standard 80% power threshold line
+  geom_hline(yintercept = 0.80, linetype = "dashed", color = "grey40") +
+  annotate("text", x = 0.10, y = 0.83, label = "80% Power Threshold", color = "grey40") +
+  # Formatting
+  scale_x_continuous(labels = scales::percent_format(accuracy = 1)) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1), limits = c(0, 1)) +
+  labs(
+    title = "Survey Power Curve: Detecting Large-Scale Biomass Changes",
+    subtitle = paste0("Based on a sparse design of ", n_tows_per_stratum, " tows per stratum"),
+    x = "Actual Population Increase (%)",
+    y = "Probability of Detecting the Change (Power)",
+    caption = "Horizontal line represents the standard benchmark for acceptable statistical power."
+  ) +
+  theme_minimal(base_size = 13)
+```
+
+Key Takeaways from this Simulation
+
+*  The Baseline Check (0% Change): Look at the plot where the population change is 0%. You will notice the power is right around 5%. This is a great built-in sanity check—it represents your Type I error rate ($\alpha = 0.05$), meaning the simulation math is working perfectly.
+*  Finding Your Tipping Point: Follow the green line until it crosses the dashed 80% Power Threshold. If it crosses at 30%, that means your current design of 6 tows per stratum is mathematically locked and loaded to catch any population shift of 30% or larger.
+*  Validating Your Intuition: This curve perfectly validates your team's hypothesis. Even though 6 samples in a massive area feels like guessing in the dark at a local level, the consolidated stratified mean will easily capture large-scale population swings.
+
+Chris here again. Note that the above power test only uses two years of data. We rely on many more years in our assessments to look for long-term changes in the populations we assess.
+
+## Small sample sizes
+
+Gemini prompt: 
+
+Thanks Gemini. Can you now provide code that demonstrates why increased sample size might be needed when population sizes are very low (meaning there is a high proportion of tows that do not catch the species of interest)?
+
+Gemini response: 
+
+When a population hits very low levels, standard sparse sampling designs encounter a major statistical barrier: the Zero-Inflation Trap.
+
+As a species becomes rare, it doesn't distribute itself evenly; it usually retreats into small, tight pockets. For a bottom trawl survey, this means the vast majority of your tows will return a catch of absolute zero, while an occasional "jackpot" tow hits a school.
+
+When sample sizes are small in this scenario, two dangerous errors occur:
+
+1. The "False Extinction" Miss: You draw all zeros by chance. Your sample mean is 0, your sample variance is 0, and your calculated CV becomes mathematically broken (NaN or a misleading 0%). You conclude the species isn't there, simply because you didn't look enough.
+
+2. The "Jackpot" Distortion: You happen to hit one school. Because your sample size is tiny, that single catch wildly inflates both the estimated mean and the variance, causing your CV to skyrocket to unusable levels (e.g., >150%).
+
+Here is the tidyverse code that simulates a collapsed or rare species population (where 85% of the tows are empty) to show how low sample sizes completely degrade your data.
+
+```{r}
+# Load required libraries
+library(tidyverse)
+
+# 1. Set up a rare/low-abundance species scenario across two strata
+set.seed(123)
+n_simulations <- 1000
+sample_sizes_to_test <- c(5, 15, 30, 60)
+
+sim_tows <- expand_grid(
+  sim_id = 1:n_simulations,
+  n_per_stratum = sample_sizes_to_test,
+  stratum = c("Stratum A", "Stratum B")
+) %>%
+  mutate(
+    # Area weights for the strata
+    W_h = if_else(stratum == "Stratum A", 0.6, 0.4),
+    n_tows = n_per_stratum
+  ) %>%
+  # Expand rows to generate individual tows
+  uncount(n_tows) %>%
+  mutate(
+    # 85% chance of drawing a zero (encounter rate = 15%)
+    hit = rbinom(n(), 1, 0.15),
+    # If we hit them, the average school size is 10 fish
+    catch = hit * rpois(n(), lambda = 10)
+  )
+
+# Mathematical true stratified mean for this population:
+# (0.6 * (0.15 * 10)) + (0.4 * (0.15 * 10)) = 1.5 fish per tow
+true_mean <- 1.5
+
+
+# 2. Aggregate the tows to calculate the estimated stratified mean for each survey
+survey_results <- sim_tows %>%
+  group_by(sim_id, n_per_stratum, stratum, W_h) %>%
+  summarize(
+    sample_mean = mean(catch),
+    .groups = "drop"
+  ) %>%
+  group_by(sim_id, n_per_stratum) %>%
+  summarize(
+    estimated_strat_mean = sum(W_h * sample_mean),
+    .groups = "drop"
+  )
+
+
+# 3. Generate diagnostic summary statistics
+survey_summary <- survey_results %>%
+  group_by(n_per_stratum) %>%
+  summarize(
+    `Surveys Missing Species entirely (%)` = mean(estimated_strat_mean == 0) * 100,
+    `Average Estimated Mean` = mean(estimated_strat_mean),
+    `Standard Error of Estimates` = sd(estimated_strat_mean)
+  )
+
+# Print the summary table to the console
+print(survey_summary)
+
+
+# 4. Plot the distribution of estimates across sample sizes
+ggplot(survey_results, aes(x = estimated_strat_mean)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 25, 
+                 fill = "darkorange", alpha = 0.7, color = "white") +
+  facet_wrap(~ paste0("n = ", n_per_stratum, " tows / stratum"), scales = "free_y") +
+  geom_vline(xintercept = true_mean, linetype = "dashed", color = "darkblue", size = 1) +
+  labs(
+    title = "Why Low Abundance Demands Higher Sample Sizes",
+    subtitle = "Distribution of survey mean estimates for a rare species (True Mean = 1.5)",
+    x = "Estimated Stratified Mean Catch from Sample",
+    y = "Probability Density",
+    caption = "Dashed line indicates the true population mean. Note the severe zero-spike at n = 5."
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    strip.text = element_text(face = "bold", size = 11)
+  )
+```
+
+What the Output Tells Us
+
+When you look at the printed table and the resulting faceted plot, three distinct behaviors emerge based on your sample size:
+
+*  The $n = 5$ Danger Zone: At 5 tows per stratum, the histogram will show a massive, alarming spike exactly at 0.0. In fact, the summary table will reveal that roughly 20% to 25% of your surveys will return a final mean of exactly 0. If management relies on this, you will frequently report that the species has completely vanished when it hasn't. The remaining surveys will be wildly spread out, often overestimating the population significantly because a single lucky catch carries too much mathematical weight.
+*  The $n = 15$ to $n = 30$ Transition: As sample size increases, the massive spike at zero rapidly flattens out. The probability of missing the species entirely drops toward zero because you are finally throwing a large enough net to guarantee encountering those sparse, patchy pockets.
+*  The $n = 60$ Stabilization: At 60 tows per stratum, the central limit theorem finally overrides the zero-inflation. The distribution shapes into a clean, bell-like curve tightly centered around the true mean of 1.5.
+
+Summary Takeaway
+
+While a sparse design (e.g., $n = 5$) is perfectly adequate to catch a 50% drop in an abundant species, it is fundamentally unequipped to monitor a rare or recovering species. When tracking low-abundance populations, increased sample size isn't just about polishing your precision—it is required to prevent the survey from entirely missing the species.
+
