@@ -99,14 +99,12 @@
 #' \item{NOTE: If you find NAs in the REGION_ID for the BLOCKS tab, then there was a stat area in the {schema}.mv_cf_stock_data_length_o product that was not provided in the tab_regions$stat_areas argument.}
 #' }
 #' 
-#'
 #' @return A populated .xlsx template and a list containing the following:
 #' \itemize{
 #'   \item{mkt_missing_yr - A table of market categories years for which 1+ market categories were not sampled where 1+ market categories were not sampled}
 #'   \item{regions_missing - Table of AREAs that appear in oracle data but not in tab_regions$stat_area argument for this function (may be missing blocking)}
 #' }
 #' 
-#' @export
 #'
 #' @examples
 #' \dontrun{
@@ -228,6 +226,8 @@
 #' @importFrom purrr map_lgl imap_dfr
 #' @importFrom tidyr replace_na
 #' 
+# @importFrom magrittr |>  # This function doesn't appear to be an export of magrittr but instead is a base R function so shouldn't need to be imported
+
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -541,25 +541,67 @@ fillCF <- function(species_itis = NULL,
     if(alk_source_opt %in% c("both", "commercial")) {
       mv_cf_age <- tryCatch({
         q_parts <- list()
-        # Filter strictly for search_yrs
+        
         if(any(search_yrs < 2020)) {
           y_leg <- search_yrs[search_yrs < 2020]
-          q_parts$legacy <- glue::glue("SELECT YEAR, NESPP4, AREA, QTR, LENGTH, 
-                                        AGE, NUMAGE as NO_AT_AGE, DOCN as SOURCE 
-                                        FROM {schema}.MV_CF_AGE_NEFSC 
-                                        WHERE SPECIES_ITIS = '{species_itis}' 
-                                        AND YEAR IN ({paste(y_leg, collapse = ',')})")
+          q_parts$legacy <- glue::glue("
+            SELECT 
+              YEAR, 
+              NESPP4, 
+              AREA, 
+              QTR, 
+              LENGTH, 
+              AGE, 
+              NUMAGE AS NO_AT_AGE, 
+              DOCN AS SOURCE,
+              NULL AS PORT,               -- Aligned with CAMS
+              NULL AS MONTH,              -- Aligned with CAMS
+              NULL AS CATDISP,            -- Aligned with CAMS
+              NULL AS SEX,                -- Aligned with CAMS
+              NULL AS LINK,               -- Aligned with CAMS
+              'LEGACY' AS BIOSAMP_SOURCE, -- Aligned with CAMS
+              NULL AS AGESTRCT,           -- Aligned with CAMS
+              'CM' AS LENGTH_UOM,         -- Aligned with CAMS
+              'YEAR' AS AGE_UOM           -- Aligned with CAMS
+            FROM {schema}.MV_CF_AGE_NEFSC 
+            WHERE SPECIES_ITIS = '{species_itis}' 
+              AND YEAR IN ({paste(y_leg, collapse = ',')})")
         }
+        
         if(any(search_yrs >= 2020)) {
           y_cams <- search_yrs[search_yrs >= 2020]
-          q_parts$cams <- glue::glue("SELECT YEAR, NESPP4, AREA, PORT, MONTH, 
-                                    CATDISP, SEX, LINK, DATA_SOURCE as BIOSAMP_SOURCE, 
-                                    LENGTH, AGE, AGESTRCT, LENGTH_UOM, AGE_UOM 
-                                    FROM {schema}.MV_CF_AGE_CAMS 
-                                    WHERE SPECIES_ITIS = '{species_itis}' 
-                                    AND YEAR IN ({paste(y_cams, collapse = ',')})")
+          q_parts$cams <- glue::glue("
+            SELECT 
+              YEAR, 
+              NESPP4, 
+              AREA, 
+              CEIL(MONTH/3) AS QTR,
+              LENGTH, 
+              AGE, 
+              1 AS NO_AT_AGE,
+              DATA_SOURCE AS SOURCE,
+              PORT, 
+              MONTH, 
+              CATDISP, 
+              SEX, 
+              LINK, 
+              DATA_SOURCE AS BIOSAMP_SOURCE, 
+              AGESTRCT, 
+              LENGTH_UOM, 
+              AGE_UOM
+            FROM {schema}.MV_CF_AGE_CAMS 
+            WHERE SPECIES_ITIS = '{species_itis}' 
+              AND YEAR IN ({paste(y_cams, collapse = ',')})")
         }
-        purrr::map_dfr(q_parts, \(x) ROracle::dbGetQuery(conn, x))
+        
+        raw_cf_res <- purrr::map_dfr(q_parts, \(x) ROracle::dbGetQuery(conn, x))
+        
+        # Standardize headers to uppercase immediately to insulate from driver variance
+        if (!is.null(raw_cf_res) && nrow(raw_cf_res) > 0) {
+          names(raw_cf_res) <- toupper(names(raw_cf_res))
+        }
+        raw_cf_res
+        
       }, error = function(e) { return(NULL) })
     }
     
@@ -944,3 +986,7 @@ fillCF <- function(species_itis = NULL,
   }
 }
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#to add from git repo
+#devtools::install_github("NEFSC/READ-PDB-COLLABORATIONS", dependencies = TRUE)
+#package is called as pdbCollaborations
