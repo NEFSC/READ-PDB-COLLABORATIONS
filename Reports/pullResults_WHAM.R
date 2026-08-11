@@ -10,15 +10,14 @@
 #'   \item{NAA - A table of NAA}
 #'   \item{ FAA - A table of FAA}
 #'   \item{Mohns_rho - A list of Mohn's rho values for F, SSB, and NAA}
-#'   \item{F.yr - A table containing a time series of F estimates and CVs}
+#'   \item{F.yr - A table containing a time series of F estimates SE, CV, 90\% and 95\% CI, relative F and rho-adjusted F with 90\% CI and adjusted relative F}
 #'   \item{F.yr_adj - F.yr table with Mohn's rho adjustments}
-#'   \item{SSB.yr - A table containing a time series of SSB estimates and CVs}
+#'   \item{SSB.yr - A table containing a time series of SSB estimates, SE, CV, 90\% and 95\% CI, relative SSB and rho-adjusted SSB with 90\% CI and adjusted relative SSB}
 #'   \item{SSB.yr_adj - SSB.yr table with Mohn's rho adjustments}
-#'   \item{Rect.yr - A table containing a time series of Recruitment and CVs}
+#'   \item{Rect.yr - A table containing a time series of Recruitment estimates, SE, CV, 90\% and 95\% CI, and rho-adjusted R with 90\% CI}
 #'   \item{Rect.yr_adj - Rect.yr table with Mohn's rho adjustments}
 #'   \item{termyr.ests.cis - A table of terminal year estimates of F, SSB, and Recruitment with 95\% and 90\% CIs}
 #' }
-
 
 
 #model <- readRDS("C:/Users/amanda.hart/Cod_GBK/MT/Cod_GB_MT_2024/Bridge_runs/9_bridge_reviseCV_NEFSC/9_bridge_model.rds")
@@ -40,17 +39,17 @@ pullResults_WHAM <- function(model = NULL,
   model_Fproxy <- data.frame(logFproxy = model_est$log_FXSPR_static, logFproxy_sd = model_sd$log_FXSPR_static) %>% # Return 95% CI for Fproxy as well
     mutate(est = exp(logFproxy),
            lo_95 = exp(logFproxy - qnorm(0.975)*logFproxy_sd),
-           hi_95 = exp(logFproxy + qnorm(0.975)*logFproxy_sd)) # %>% distinct() #!!! unclear if distinct still needed, when only 1 row returned this causes problems
+           hi_95 = exp(logFproxy + qnorm(0.975)*logFproxy_sd)) %>% distinct() #!!! unclear if distinct still needed, when only 1 row returned this causes problems
   
   model_SSBproxy <- data.frame(logSSBproxy = model_est$log_SSB_FXSPR_static, logSSBproxy_sd = model_sd$log_SSB_FXSPR_static) %>%
     mutate(est = exp(logSSBproxy),
            lo_95 = exp(logSSBproxy - qnorm(0.975)*logSSBproxy_sd),
-           hi_95 = exp(logSSBproxy + qnorm(0.975)*logSSBproxy_sd)) # %>% distinct() # Remove duplicates introduced by lines 31-32
+           hi_95 = exp(logSSBproxy + qnorm(0.975)*logSSBproxy_sd)) %>% distinct() # Remove duplicates introduced by lines 31-32
   
   model_MSYproxy <- data.frame(logMSYproxy = model_est$log_Y_FXSPR_static, logMSYproxy_sd = model_sd$log_Y_FXSPR_static) %>%
     mutate(est = exp(logMSYproxy),
            lo_95 = exp(logMSYproxy - qnorm(0.975)*logMSYproxy_sd),
-           hi_95 = exp(logMSYproxy + qnorm(0.975)*logMSYproxy_sd)) # %>% distinct() # Remove duplicates introduced by lines 31-32
+           hi_95 = exp(logMSYproxy + qnorm(0.975)*logMSYproxy_sd)) %>% distinct() # Remove duplicates introduced by lines 31-32
   
   brps <- bind_rows('Fproxy' = model_Fproxy, 'SSBproxy' = model_SSBproxy, 'MSYproxy' = model_MSYproxy, .id="BRP") %>% select(BRP, est, lo_95, hi_95)
   
@@ -76,7 +75,30 @@ pullResults_WHAM <- function(model = NULL,
   return_list$FAA <- FAA
   
   # Mohn's rho
-  Mohns_rho <- mohns_rho(model)
+  if(multiWHAM == TRUE){
+    Mohns_rho <- mohns_rho(model) # Use multi-wham mohn's rho calculation
+  } else { # This is copy of mohns_rho from single_wham branch
+    npeels = length(model$peels)
+    ny = model$env$data$n_years_model
+    na = model$env$data$n_ages
+    if(npeels){
+      rho = c(
+        mean(sapply(1:npeels, function(x) model$peels[[x]]$rep$SSB[ny-x]/model$rep$SSB[ny-x] - 1)),
+        mean(sapply(1:npeels, function(x) model$peels[[x]]$rep$Fbar[ny-x]/model$rep$Fbar[ny-x] - 1)))#,
+      #mean(sapply(1:npeels, function(x) model$peels[[x]]$rep$NAA[ny-x,1]/model$rep$NAA[ny-x,1] - 1)))
+      names(rho) = c("SSB","Fbar")#,"R")
+      rho.naa = sapply(1:na, function(y)
+      {
+        mean(sapply(1:npeels, function(x) model$peels[[x]]$rep$NAA[ny-x,y]/model$rep$NAA[ny-x,y] - 1))
+      })
+      names(rho.naa) = c("R", paste0("N", model$ages.lab[2:na]))
+      rho = c(rho, rho.naa)
+      
+      Mohns_rho <- rho
+    } else {
+      stop("There are no peels in this model")
+    }
+  }
   names(Mohns_rho)[names(Mohns_rho)=='Fbar'] <- 'F'
   names(Mohns_rho)[names(Mohns_rho)=='R'] <- 'Rect'
   return_list$Mohns_rho <- Mohns_rho
@@ -84,26 +106,26 @@ pullResults_WHAM <- function(model = NULL,
   # Annual F
   if(multiWHAM == TRUE){
     F.yr <- calc.uncertainty(log.est = model_est$log_F_tot, log.se = model_sd$log_F_tot) %>% mutate(YEAR = model$years, .before = "est") %>%
-      mutate(relF = est/model_Fproxy["est"]) %>%
+      mutate(relF = est/unlist(model_Fproxy["est"])) %>%
       calc.rho.adj.ests(., rho = Mohns_rho$F) %>% # !!! May need to check if should be Fbar or ["Fbar"]
-      mutate(relF.adj = est.adj/model_Fproxy["est"])
+      mutate(relF.adj = est.adj/unlist(model_Fproxy["est"]))
   } else{
     F.yr <- calc.uncertainty(log.est = model_est$log_F, log.se = model_sd$log_F) %>% mutate(YEAR = model$years, .before = "est") %>%
-      mutate(relF = est/model_Fproxy["est"]) %>%
+      mutate(relF = est/unlist(model_Fproxy["est"])) %>%
       calc.rho.adj.ests(., rho = Mohns_rho["F"]) %>%
-      mutate(relF.adj = est.adj/model_Fproxy["est"])
+      mutate(relF.adj = est.adj/unlist(model_Fproxy["est"]))
   }
   
-  return_list$F.yr <- F.yr %>% select(Year = YEAR, F = est, F.CV = CV)
+  return_list$F.yr <- F.yr #%>% select(Year = YEAR, F = est, F.CV = CV)
   return_list$F.yr_adj <- F.yr
   
   # Annual SSB
   SSB.yr <- calc.uncertainty(log.est = model_est$log_SSB, log.se = model_sd$log_SSB) %>% mutate(YEAR = model$years, .before = "est") %>%
-    mutate(relSSB = est/model_SSBproxy["est"]) %>% #!!! confirm this is working as desired
-    calc.rho.adj.ests(., rho = Mohns_rho["SSB"]) %>%  # !!! confirm that ["SSB"] syntax works for multi-wham
-    mutate(relSSB.adj= est.adj/model_SSBproxy["est"])
+    mutate(relSSB = est/unlist(model_SSBproxy["est"])) %>% 
+    calc.rho.adj.ests(., rho = unlist(Mohns_rho["SSB"])) %>%  
+    mutate(relSSB.adj= est.adj/unlist(model_SSBproxy["est"]))
   
-  return_list$SSB.yr <- SSB.yr %>% select(Year = YEAR, SSB = est, SSB.CV = CV)
+  return_list$SSB.yr <- SSB.yr #%>% select(Year = YEAR, SSB = est, SSB.CV = CV)
   return_list$SSB.yr_adj <- SSB.yr
   
   # Recruitment
@@ -115,7 +137,7 @@ pullResults_WHAM <- function(model = NULL,
       calc.rho.adj.ests(., rho = Mohns_rho["Rect"]) 
   }
   
-  return_list$Rect.yr <- Rect.yr %>% select(Year = YEAR, Rect = est, Rect.CV = CV)
+  return_list$Rect.yr <- Rect.yr #%>% select(Year = YEAR, Rect = est, Rect.CV = CV)
   return_list$Rect.yr_adj <- Rect.yr
   
   # Condense terminal year estimates with CIs

@@ -20,6 +20,9 @@
 #'   \item{n_indices - The number of indices in model_MT}
 #'   \item{MT_termyr - A table of MT estimates and rho-adjusted values for F, SSB, and Recruitment terminal year estimates, associated CVs and the BRP ratio}
 #'   \item{prior_termyr - A table of prior assessment estimates and rho-adjusted values for F, SSB, and Recruitment terminal year estimates, associated CVs and the BRP ratio}
+#'   \item{MT_SSBseries & prior_SSBseries - Tables (current and prior models respectively) of SSB series with SE, CV, 90\% and 95\% CI, relative SSB and rho-adjusted SSB with 90\% CI and adjusted relative SSB}
+#'   \item{MT_Fseries & prior_Fseries - Tables (current and prior models respectively) of F series with SE, CV, 90\% and 95\% CI, relative F and rho-adjusted F with 90\% CI and adjusted relative F}
+#'   \item{MT_Rseries & prior_Rseries - Tables (current and prior models respectively) of Recruitment series with SE, CV, 90\% and 95\% CI, and rho-adjusted R with 90\% CI}
 #' }   
 
 library(tidyverse)
@@ -48,6 +51,9 @@ makeReportData <- function(model_MT = NULL,
   return_list$MT_BRPs <- MT_results$brps
   return_list$MT_MohnsRho <- MT_results$Mohns_rho
   return_list$MT_termyr <- MT_results$termyr.ests.cis
+  return_list$MT_SSBseries <- MT_results$SSB.yr # SSB with CI
+  return_list$MT_Fseries <- MT_results$F.yr # F with CI
+  return_list$MT_Rseries <- MT_results$Rect.yr # R with CI
   
   # Check if retro is significant (TRUE if rho-adjusted F or SSB in terminal year falls outside 90% CI for model estimate)
   check_SSBadj <- MT_results$SSB.yr_adj %>% group_by(YEAR) %>% mutate(doAdj_SSB = (est.adj <= hi_90 & est.adj >= lo_90) == FALSE) %>% tail(n=1) %>% select(doAdj_SSB)
@@ -210,7 +216,8 @@ makeReportData <- function(model_MT = NULL,
   # NAA for year 2-end
   if (multiWHAM[2] == TRUE) {
     NAA <- sdrep[grepl("log_NAA", rownames(sdrep), fixed = TRUE)==TRUE & grepl("log_NAA_rep", rownames(sdrep), fixed = TRUE)==FALSE & grepl("log_NAA_sigma", rownames(sdrep), fixed = TRUE)==FALSE,]
-    mutate(AGE = rep(1:model_MTproj$input$data$n_ages, each=length(model_MTproj$years_full)-1))
+    NAA <- calc.uncertainty(log.est=NAA$Estimate, log.se=NAA$`Std. Error`) %>% drop_columns("CV") %>% # Calculate CIs for NAA estimates
+      mutate(AGE = rep(1:model_MTproj$input$data$n_ages, each=length(model_MTproj$years_full)-1))
   } else {
     NAA <- sdrep[grepl("log_NAA_rep", rownames(sdrep), fixed = TRUE),]
     NAA <- calc.uncertainty(log.est=NAA$Estimate, log.se=NAA$`Std. Error`) %>% drop_columns("CV") %>% # Calculate CIs for NAA estimates
@@ -225,9 +232,13 @@ makeReportData <- function(model_MT = NULL,
   } else{ # If NAA in year 1 not estimated by age, pull values from rep without parameter CI
     if (multiWHAM[2] == TRUE) {N1 <- model_MTproj$rep$NAA[1,,1,]} else {N1 <- model_MTproj$rep$NAA[1,]}
   }
+  N1 <- N1 %>% mutate(YEAR = model_MTproj$years_full[1]) # Add year index to first year estimates for all ages!!! START HERE, need to assign year and then assign year to NAA separately then combine so line 203 filter pulls all years
+  NAA <- NAA %>% mutate(YEAR = rep(model_MTproj$years_full[2:length(model_MTproj$years_full)], model_MTproj$input$data$n_ages)) %>% # Add year to NAA
+    rbind(N1, .) # Append first year NAA estimates
+  
   # Recruitment in all years
   if (multiWHAM[2] == TRUE) {
-    Rect.allyrs <- NAA %>% filter(AGE == 1) %>% rbind(c(N1[1], NA, NA, NA, 1),.) %>% mutate(YEAR = model_MTproj$years_full)
+    Rect.allyrs <- NAA %>% filter(AGE == 1)
   } else {
     Rect.allyrs <- NAA %>% filter(AGE == 1) %>% mutate(YEAR = model_MTproj$years_full)
   }
@@ -243,6 +254,9 @@ makeReportData <- function(model_MT = NULL,
     return_list$prior_BRPs <- prior_results$brps
     return_list$prior_MohnsRho <- prior_results$Mohns_rho
     return_list$prior_termyr <- prior_results$termyr.ests.cis
+    return_list$prior_SSBseries <- prior_results$SSB.yr # SSB with CI
+    return_list$prior_Fseries <- prior_results$F.yr # F with CI
+    return_list$prior_Rseries <- prior_results$Rect.yr # R with CI
   } else{ # Otherwise pull results from model_prior list
     warning("Have not built out options to format prior assessment results if not a WHAM model")
   }
@@ -264,12 +278,14 @@ makeReportData <- function(model_MT = NULL,
   return_list$text_f <- create.brp.text(brp.name = 'Fproxy', round.digits = 2, brp.table = BRPs)
   
   
-  # Create model results tables #####
-  model.summary <- full_join(MT_results$SSB.yr, MT_results$F.yr) %>% 
-    full_join(., MT_results$Rect.yr)
+  # Create model results tables  #####
+  model.summary <- full_join(select(MT_results$SSB.yr, Year = YEAR, SSB = est, SSB.CV = CV), 
+                             select(MT_results$F.yr, Year = YEAR, F = est, F.CV = CV)) %>% 
+                full_join(., select(MT_results$Rect.yr, Year = YEAR, Rect = est, Rect.CV = CV))
   
-  prev.model.summary <- full_join(prior_results$SSB.yr, prior_results$F.yr) %>%
-    full_join(., prior_results$Rect.yr)
+  prev.model.summary <- full_join(select(prior_results$SSB.yr, Year = YEAR, SSB = est, SSB.CV = CV), 
+                                  select(prior_results$F.yr,Year = YEAR, F = est, F.CV = CV)) %>%
+                     full_join(., select(prior_results$Rect.yr, Year = YEAR, Rect = est, Rect.CV = CV))
   colnames(prev.model.summary) <- c("Year", paste0("prev_",colnames(prev.model.summary)[-1]))
   
   comb.model.summary <- full_join(model.summary, prev.model.summary)
@@ -277,9 +293,9 @@ makeReportData <- function(model_MT = NULL,
   whole.cols <- c("Year", "SSB","Rect","prev_SSB","prev_Rect") # Round numbers for output
   dec.cols <- colnames(comb.model.summary)[!colnames(comb.model.summary) %in% whole.cols]
   
-  return_list$model_results <- comb.model.summary %>%
-    mutate(across(all_of(whole.cols), round, 0)) %>%
-    mutate(across(all_of(dec.cols), round, 3)) 
+  # return_list$model_results <- comb.model.summary %>%
+  #   mutate(across(all_of(whole.cols), round, 0)) %>%
+  #   mutate(across(all_of(dec.cols), round, 3)) 
   
   
   # Save and return #####
