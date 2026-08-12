@@ -36,22 +36,22 @@ pullResults_WHAM <- function(model = NULL,
   
   # Reference points
     # model_Fproxy <- model_est$log_FXSPR_static %>% exp() %>% c(est = ., lo_95 = NA, hi_95 = NA) 
-  model_Fproxy <- data.frame(logFproxy = model_est$log_FXSPR_static, logFproxy_sd = model_sd$log_FXSPR_static) %>% # Return 95% CI for Fproxy as well
+  model_Fproxy <- data.frame(logFproxy = model_est$log_FXSPR_static, logFproxy_sd = round(model_sd$log_FXSPR_static, 6)) %>% # Return 95% CI for Fproxy as well
     mutate(est = exp(logFproxy),
            lo_95 = exp(logFproxy - qnorm(0.975)*logFproxy_sd),
            hi_95 = exp(logFproxy + qnorm(0.975)*logFproxy_sd)) %>% distinct() #!!! unclear if distinct still needed, when only 1 row returned this causes problems
   
-  model_SSBproxy <- data.frame(logSSBproxy = model_est$log_SSB_FXSPR_static, logSSBproxy_sd = model_sd$log_SSB_FXSPR_static) %>%
+  model_SSBproxy <- data.frame(logSSBproxy = model_est$log_SSB_FXSPR_static, logSSBproxy_sd = round(model_sd$log_SSB_FXSPR_static, 6)) %>% # Round to 6 decimals since C.Perretti found issue where values differed by -5.551115e-17 which resulted in duplicate lines 
     mutate(est = exp(logSSBproxy),
            lo_95 = exp(logSSBproxy - qnorm(0.975)*logSSBproxy_sd),
            hi_95 = exp(logSSBproxy + qnorm(0.975)*logSSBproxy_sd)) %>% distinct() # Remove duplicates introduced by lines 31-32
   
-  model_MSYproxy <- data.frame(logMSYproxy = model_est$log_Y_FXSPR_static, logMSYproxy_sd = model_sd$log_Y_FXSPR_static) %>%
+  model_MSYproxy <- data.frame(logMSYproxy = model_est$log_Y_FXSPR_static, logMSYproxy_sd = round(model_sd$log_Y_FXSPR_static,6)) %>%
     mutate(est = exp(logMSYproxy),
            lo_95 = exp(logMSYproxy - qnorm(0.975)*logMSYproxy_sd),
            hi_95 = exp(logMSYproxy + qnorm(0.975)*logMSYproxy_sd)) %>% distinct() # Remove duplicates introduced by lines 31-32
   
-  brps <- bind_rows('Fproxy' = model_Fproxy, 'SSBproxy' = model_SSBproxy, 'MSYproxy' = model_MSYproxy, .id="BRP") %>% select(BRP, est, lo_95, hi_95)
+  brps <- bind_rows('Fproxy' = model_Fproxy, 'SSBproxy' = distinct(model_SSBproxy), 'MSYproxy' = model_MSYproxy, .id="BRP") %>% select(BRP, est, lo_95, hi_95)
   
   return_list$brps <- brps
   
