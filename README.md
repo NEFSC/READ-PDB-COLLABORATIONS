@@ -75,6 +75,7 @@ See README files within each folder for detailed descriptions of the files they 
 | stockEff | Contains functions to interface with stockEff (e.g., pull information from or assist in loading new stocks/settings) |
 | Beamer Presentation w/ NOAA logo | Code to create Beamer presentation (pdf) with Table of Contents indicator in the header, with fancy 'NOAA branding'. Folder for this is now in the repo.|
 | workload_view | Code to make a simple stacked barplot showing weekly, yearly, and weekly proportion of where you spend your time by category.  includes a .csv file that you can modify with your own categories and time guesstimates.|
+| survey_evaluation | Package to evaluate survey sampling, stratum tows, stratum means, stratum contributions to aggregate index, etc.|
 
 R package files that SHOULD NOT be edited directly:
 
