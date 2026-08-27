@@ -1,0 +1,284 @@
+---
+title: "Bottom Trawl Survey Evaluation Report: `r params$stock_name`"
+author: "`r params$author_name`"
+date: "`r Sys.Date()`"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    theme: cosmo
+    self-contained: true
+params:
+  author_name: "Liz Brooks"
+  stock_name: "Plaid Fish"
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r setup}
+library(here)
+library(htmltools)
+
+# Define the directory where plots are saved
+plot_dir <- here("plots")
+
+# Helper function to check if files exist for a specific unit
+has_unit_files <- function(pattern_str) {
+  length(list.files(plot_dir, pattern = pattern_str, full.names = TRUE)) > 0
+}
+```
+
+## Survey Area Metrics
+
+### Stratum Area Proportion
+This plot illustrates the proportion of total stock area that each individual stratum represents for `r params$stock_name`.
+
+```{r area-prop}
+area_plot <- list.files(plot_dir, pattern = "stratum.area.proportion.plot", full.names = TRUE)
+
+if (length(area_plot) > 0) {
+  knitr::include_graphics(area_plot)
+} else {
+  cat("Stratum area proportion plot not found in plots directory.")
+}
+```
+
+### Stock Area Sampled Tracking
+Tracks the total proportion of the stock area successfully sampled across historical survey years. The dashed threshold sits at 95% coverage.
+
+```{r area-sampled}
+sampled_plot <- list.files(plot_dir, pattern = "stock.area.sampled.plot", full.names = TRUE)
+
+if (length(sampled_plot) > 0) {
+  knitr::include_graphics(sampled_plot)
+} else {
+  cat("Stock area sampled tracking plot not found in plots directory.")
+}
+```
+
+---
+
+## Stratum Mean Catch Trends
+
+### Incomplete Sampling Discrepancies
+Shows the calculated divergence in the stratified mean resulting strictly from years with incomplete spatial survey coverage. Use tabs below to toggle evaluation metrics.
+
+::: {.panel-tabset}
+
+```{r discrepancies-tabset}
+#| output: asis
+
+avail_discrep_units <- c()
+if (has_unit_files("mean.incomplete.diff.plot\\.N\\.")) avail_discrep_units <- c(avail_discrep_units, "N")
+if (has_unit_files("mean.incomplete.diff.plot\\.Kg\\.")) avail_discrep_units <- c(avail_discrep_units, "Kg")
+
+if (length(avail_discrep_units) == 0 && has_unit_files("mean.incomplete.diff.plot")) {
+  avail_discrep_units <- "Default"
+}
+
+for (u in avail_discrep_units) {
+  tab_title <- switch(u, 
+                      "N" = "Abundance (N/tow)", 
+                      "Kg" = "Biomass (Kg/tow)", 
+                      "Default" = "Survey Discrepancies")
+  
+  cat(paste0("#### ", tab_title, "\n\n"))
+  
+  diff_pattern <- if(u == "Default") "mean.incomplete.diff.plot" else paste0("mean.incomplete.diff.plot\\.", u)
+  diff_plot <- list.files(plot_dir, pattern = diff_pattern, full.names = TRUE)
+  if (length(diff_plot) > 0) {
+    cat(paste0("![](", diff_plot, ")\n\n"))
+  } else {
+    cat("No discrepancy plot generated for this unit (this is normal if sampling was 100% complete across all years).\n\n")
+  }
+}
+```
+
+:::
+
+### Stratum Mean Time-Series
+Time series of strata means, by season. Use tabs below to toggle evaluation metrics.
+
+::: {.panel-tabset}
+
+```{r stratum-means-ts-tabset}
+#| output: asis
+
+avail_mean_units <- c()
+if (has_unit_files("stratum.means.plot.page.*\\.N\\.")) avail_mean_units <- c(avail_mean_units, "N")
+if (has_unit_files("stratum.means.plot.page.*\\.Kg\\.")) avail_mean_units <- c(avail_mean_units, "Kg")
+
+if (length(avail_mean_units) == 0 && has_unit_files("stratum.means.plot.page")) {
+  avail_mean_units <- "Default"
+}
+
+for (u in avail_mean_units) {
+  tab_title <- switch(u, 
+                      "N" = "Abundance (N/tow)", 
+                      "Kg" = "Biomass (Kg/tow)", 
+                      "Default" = "Survey Means")
+  
+  cat(paste0("#### ", tab_title, "\n\n"))
+  
+  mean_pattern <- if(u == "Default") "stratum.means.plot.page" else paste0("stratum.means.plot.page.*\\.", u)
+  mean_pages <- list.files(plot_dir, pattern = mean_pattern, full.names = TRUE)
+  
+  if (length(mean_pages) > 0) {
+    for (page in sort(mean_pages)) {
+      page_num <- gsub(".*page\\.(\\d+)\\..*", "\\1", page)
+      cat(paste0("##### Page ", page_num, "\n\n"))
+      cat(paste0("![](", page, ")\n\n"))
+    }
+  } else {
+    cat("No paginated stratum mean plots found for this unit.\n\n")
+  }
+}
+```
+
+:::
+
+---
+
+## Stratum Catch Contributions to Mean
+
+This section breaks down how much individual strata contribute to the total calculated mean index across seasons. Use the main tabs to switch metrics, and the inner tabs to toggle between seasonal configurations or see normalized proportions.
+
+::: {.panel-tabset}
+
+```{r stratum-contributions-tabset}
+#| output: asis
+
+contrib_units <- c()
+if (has_unit_files("str.mean.by.contr\\.N\\.")) contrib_units <- c(contrib_units, "N")
+if (has_unit_files("str.mean.by.contr\\.Kg\\.")) contrib_units <- c(contrib_units, "Kg")
+
+if (length(contrib_units) == 0 && has_unit_files("str.mean.by.contr")) {
+  contrib_units <- "Default"
+}
+
+for (u in contrib_units) {
+  tab_title <- switch(u, "N" = "Abundance (N)", "Kg" = "Biomass (Kg)", "Default" = "Survey Contribution")
+  cat(paste0("### ", tab_title, "\n\n"))
+  
+  p_comb   <- if(u == "Default") "^str.mean.by.contr\\." else paste0("^str.mean.by.contr\\.", u)
+  p_fall   <- if(u == "Default") "str.mean.FALL.by.contr" else paste0("str.mean.FALL.by.contr\\.", u)
+  p_spring <- if(u == "Default") "str.mean.SPRING.by.contr" else paste0("str.mean.SPRING.by.contr\\.", u)
+  
+  p_comb_prop   <- if(u == "Default") "str.mean.by.contr.prop\\." else paste0("str.mean.by.contr.prop\\.", u)
+  p_fall_prop   <- if(u == "Default") "str.mean.FALL.by.contr.prop" else paste0("str.mean.FALL.by.contr.prop\\.", u)
+  p_spring_prop <- if(u == "Default") "str.mean.SPRING.by.contr.prop" else paste0("str.mean.SPRING.by.contr.prop\\.", u)
+  
+  f_comb   <- list.files(plot_dir, pattern = p_comb, full.names = TRUE)
+  f_fall   <- list.files(plot_dir, pattern = p_fall, full.names = TRUE)
+  f_spring <- list.files(plot_dir, pattern = p_spring, full.names = TRUE)
+  
+  f_comb_prop   <- list.files(plot_dir, pattern = p_comb_prop, full.names = TRUE)
+  f_fall_prop   <- list.files(plot_dir, pattern = p_fall_prop, full.names = TRUE)
+  f_spring_prop <- list.files(plot_dir, pattern = p_spring_prop, full.names = TRUE)
+  
+  cat("::::: {.panel-tabset}\n\n")
+  
+  if(length(f_comb) > 0) {
+    cat("#### Combined Seasons (Absolute)\n\n")
+    cat(paste0("![](", f_comb, ")\n\n"))
+  }
+  if(length(f_comb_prop) > 0) {
+    cat("#### Combined Seasons (Normalized Proportions)\n\n")
+    cat(paste0("![](", f_comb_prop, ")\n\n"))
+  }
+  if(length(f_fall) > 0) {
+    cat("#### Fall Survey (Absolute)\n\n")
+    cat(paste0("![](", f_fall, ")\n\n"))
+  }
+  if(length(f_fall_prop) > 0) {
+    cat("#### Fall Survey (Normalized Proportions)\n\n")
+    cat(paste0("![](", f_fall_prop, ")\n\n"))
+  }
+  if(length(f_spring) > 0) {
+    cat("#### Spring Survey (Absolute)\n\n")
+    cat(paste0("![](", f_spring, ")\n\n"))
+  }
+  if(length(f_spring_prop) > 0) {
+    cat("#### Spring Survey (Normalized Proportions)\n\n")
+    cat(paste0("![](", f_spring_prop, ")\n\n"))
+  }
+  
+  cat(":::::\n\n")
+}
+```
+
+:::
+
+---
+
+## Effort Tracking (Number of Tows)
+
+### Annual Tow Totals & CV Matrix
+
+::: {.panel-tabset}
+### Total Tows per Season
+```{r total-tows}
+tot_tows <- list.files(plot_dir, pattern = "ntows.yr.season.plot", full.names = TRUE)
+if (length(tot_tows) > 0) knitr::include_graphics(tot_tows)
+```
+
+### CV Variations over Time
+```{r cv-trends-tabset}
+#| output: asis
+
+cv_units <- c()
+if (has_unit_files("cv.yr.season.plot\\.N\\.")) cv_units <- c(cv_units, "N")
+if (has_unit_files("cv.yr.season.plot\\.Kg\\.")) cv_units <- c(cv_units, "Kg")
+if (length(cv_units) == 0 && has_unit_files("cv.yr.season.plot")) cv_units <- "Default"
+
+if (length(cv_units) > 1) cat("::::: {.panel-tabset}\n\n")
+
+for (u in cv_units) {
+  if (length(cv_units) > 1) {
+    t_title <- switch(u, "N" = "Abundance (N) CV", "Kg" = "Biomass (Kg) CV")
+    cat(paste0("#### ", t_title, "\n\n"))
+  }
+  cv_pat <- if(u == "Default") "cv.yr.season.plot" else paste0("cv.yr.season.plot\\.", u)
+  cv_f <- list.files(plot_dir, pattern = cv_pat, full.names = TRUE)
+  if (length(cv_f) > 0) cat(paste0("![](", cv_f, ")\n\n"))
+}
+
+if (length(cv_units) > 1) cat(":::::\n\n")
+```
+:::
+
+### Detailed Tow Distributions by Stratum
+::: {.panel-tabset}
+
+### Fall (All Years)
+```{r tows-fall-all}
+#| output: asis
+fall_all <- list.files(plot_dir, pattern = "ntow.fall.by.stratum.plot.page", full.names = TRUE)
+for (f in sort(fall_all)) { cat(paste0("![](", f, ")\n\n")) }
+```
+
+### Fall (Bigelow Years)
+```{r tows-fall-bigelow}
+#| output: asis
+fall_big <- list.files(plot_dir, pattern = "ntow.fall.by.stratum.bigyrs.plot.page", full.names = TRUE)
+for (f in sort(fall_big)) { cat(paste0("![](", f, ")\n\n")) }
+```
+
+### Spring (All Years)
+```{r tows-spring-all}
+#| output: asis
+spring_all <- list.files(plot_dir, pattern = "ntow.spring.by.stratum.plot.page", full.names = TRUE)
+for (s in sort(spring_all)) { cat(paste0("![](", s, ")\n\n")) }
+```
+
+### Spring (Bigelow Years)
+```{r tows-spring-bigelow}
+#| output: asis
+spring_big <- list.files(plot_dir, pattern = "ntow.spring.by.stratum.bigyrs.plot.page", full.names = TRUE)
+for (s in sort(spring_big)) { cat(paste0("![](", s, ")\n\n")) }
+```
+
+:::
