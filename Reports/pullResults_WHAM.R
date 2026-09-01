@@ -37,17 +37,17 @@ pullResults_WHAM <- function(model = NULL,
   # Reference points
     # model_Fproxy <- model_est$log_FXSPR_static %>% exp() %>% c(est = ., lo_95 = NA, hi_95 = NA) 
   model_Fproxy <- data.frame(logFproxy = model_est$log_FXSPR_static, logFproxy_sd = round(model_sd$log_FXSPR_static, 6)) %>% # Return 95% CI for Fproxy as well
-    mutate(est = exp(logFproxy),
+    dplyr::mutate(est = exp(logFproxy),
            lo_95 = exp(logFproxy - qnorm(0.975)*logFproxy_sd),
            hi_95 = exp(logFproxy + qnorm(0.975)*logFproxy_sd)) %>% distinct() #!!! unclear if distinct still needed, when only 1 row returned this causes problems
   
   model_SSBproxy <- data.frame(logSSBproxy = model_est$log_SSB_FXSPR_static, logSSBproxy_sd = round(model_sd$log_SSB_FXSPR_static, 6)) %>% # Round to 6 decimals since C.Perretti found issue where values differed by -5.551115e-17 which resulted in duplicate lines 
-    mutate(est = exp(logSSBproxy),
+    dplyr::mutate(est = exp(logSSBproxy),
            lo_95 = exp(logSSBproxy - qnorm(0.975)*logSSBproxy_sd),
            hi_95 = exp(logSSBproxy + qnorm(0.975)*logSSBproxy_sd)) %>% distinct() # Remove duplicates introduced by lines 31-32
   
   model_MSYproxy <- data.frame(logMSYproxy = model_est$log_Y_FXSPR_static, logMSYproxy_sd = round(model_sd$log_Y_FXSPR_static,6)) %>%
-    mutate(est = exp(logMSYproxy),
+    dplyr::mutate(est = exp(logMSYproxy),
            lo_95 = exp(logMSYproxy - qnorm(0.975)*logMSYproxy_sd),
            hi_95 = exp(logMSYproxy + qnorm(0.975)*logMSYproxy_sd)) %>% distinct() # Remove duplicates introduced by lines 31-32
   
@@ -105,35 +105,35 @@ pullResults_WHAM <- function(model = NULL,
   
   # Annual F
   if(multiWHAM == TRUE){
-    F.yr <- calc.uncertainty(log.est = model_est$log_F_tot, log.se = model_sd$log_F_tot) %>% mutate(YEAR = model$years, .before = "est") %>%
-      mutate(relF = est/unlist(model_Fproxy["est"])) %>%
+    F.yr <- calc.uncertainty(log.est = model_est$log_F_tot, log.se = model_sd$log_F_tot) %>% dplyr::mutate(YEAR = model$years, .before = "est") %>%
+      dplyr::mutate(relF = est/unlist(model_Fproxy["est"])) %>%
       calc.rho.adj.ests(., rho = Mohns_rho$F) %>% # !!! May need to check if should be Fbar or ["Fbar"]
-      mutate(relF.adj = est.adj/unlist(model_Fproxy["est"]))
+      dplyr::mutate(relF.adj = est.adj/unlist(model_Fproxy["est"]))
   } else{
-    F.yr <- calc.uncertainty(log.est = model_est$log_F, log.se = model_sd$log_F) %>% mutate(YEAR = model$years, .before = "est") %>%
-      mutate(relF = est/unlist(model_Fproxy["est"])) %>%
+    F.yr <- calc.uncertainty(log.est = model_est$log_F, log.se = model_sd$log_F) %>% dplyr::mutate(YEAR = model$years, .before = "est") %>%
+      dplyr::mutate(relF = est/unlist(model_Fproxy["est"])) %>%
       calc.rho.adj.ests(., rho = Mohns_rho["F"]) %>%
-      mutate(relF.adj = est.adj/unlist(model_Fproxy["est"]))
+      dplyr::mutate(relF.adj = est.adj/unlist(model_Fproxy["est"]))
   }
   
   return_list$F.yr <- F.yr #%>% select(Year = YEAR, F = est, F.CV = CV)
   return_list$F.yr_adj <- F.yr
   
   # Annual SSB
-  SSB.yr <- calc.uncertainty(log.est = model_est$log_SSB, log.se = model_sd$log_SSB) %>% mutate(YEAR = model$years, .before = "est") %>%
-    mutate(relSSB = est/unlist(model_SSBproxy["est"])) %>% 
+  SSB.yr <- calc.uncertainty(log.est = model_est$log_SSB, log.se = model_sd$log_SSB) %>% dplyr::mutate(YEAR = model$years, .before = "est") %>%
+    dplyr::mutate(relSSB = est/unlist(model_SSBproxy["est"])) %>% 
     calc.rho.adj.ests(., rho = unlist(Mohns_rho["SSB"])) %>%  
-    mutate(relSSB.adj= est.adj/unlist(model_SSBproxy["est"]))
+    dplyr::mutate(relSSB.adj= est.adj/unlist(model_SSBproxy["est"]))
   
   return_list$SSB.yr <- SSB.yr #%>% select(Year = YEAR, SSB = est, SSB.CV = CV)
   return_list$SSB.yr_adj <- SSB.yr
   
   # Recruitment
   if(multiWHAM == TRUE){
-    Rect.yr <- calc.uncertainty(log.est = model_est$log_NAA_rep[1,,,1], log.se = model_sd$log_NAA_rep[1,,,1]) %>% mutate(YEAR = model$years, .before = "est") %>%
+    Rect.yr <- calc.uncertainty(log.est = model_est$log_NAA_rep[1,,,1], log.se = model_sd$log_NAA_rep[1,,,1]) %>% dplyr::mutate(YEAR = model$years, .before = "est") %>%
       calc.rho.adj.ests(., rho = Mohns_rho$naa[1]) # !!! confirm naa indexing for mohn's rho works across multi-wham options
   } else{
-    Rect.yr <- calc.uncertainty(log.est = model_est$log_NAA_rep[,1], log.se = model_sd$log_NAA_rep[,1]) %>% mutate(YEAR = model$years, .before = "est") %>%
+    Rect.yr <- calc.uncertainty(log.est = model_est$log_NAA_rep[,1], log.se = model_sd$log_NAA_rep[,1]) %>% dplyr::mutate(YEAR = model$years, .before = "est") %>%
       calc.rho.adj.ests(., rho = Mohns_rho["Rect"]) 
   }
   
@@ -171,7 +171,7 @@ pullResults_WHAM <- function(model = NULL,
       F = F_fleet,
       SSB=SSB,
       .id = "Parameter") %>%
-      bind_rows(., filter(Rect.yr, YEAR == model.lyr) %>% mutate(Parameter = "Rect")) %>%
+      bind_rows(., filter(Rect.yr, YEAR == model.lyr) %>% dplyr::mutate(Parameter = "Rect")) %>%
       select(Parameter, est, CV, lo_90, hi_90, lo_95, hi_95, BRP.ratio, est.adj, lo_90.adj, hi_90.adj, BRP.ratio.adj) 
     termyr.ests.cis$Parameter[1:model$input$data$n_fleets] = "F"
     termyr.ests.cis$Parameter[model$input$data$n_fleets+1] = "SSB"
@@ -187,7 +187,7 @@ pullResults_WHAM <- function(model = NULL,
       F=F,
       SSB=SSB,
       .id = "Parameter") %>%
-      bind_rows(., filter(Rect.yr, YEAR == model.lyr) %>% mutate(Parameter = "Rect")) %>%
+      bind_rows(., filter(Rect.yr, YEAR == model.lyr) %>% dplyr::mutate(Parameter = "Rect")) %>%
       select(Parameter, est, CV, lo_90, hi_90, lo_95, hi_95, BRP.ratio, est.adj, lo_90.adj, hi_90.adj, BRP.ratio.adj) 
     termyr.ests.cis$Parameter[1] = "F"
     termyr.ests.cis$Parameter[2] = "SSB"
