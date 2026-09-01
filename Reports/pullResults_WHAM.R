@@ -143,11 +143,11 @@ pullResults_WHAM <- function(model = NULL,
   # Condense terminal year estimates with CIs
   model.lyr = tail(model$years, n=1)
   
-  F = filter(F.yr, YEAR == model.lyr) %>% rename(BRP.ratio = relF, BRP.ratio.adj = relF.adj)
+  F = filter(F.yr, YEAR == model.lyr) %>% dplyr::rename(BRP.ratio = relF, BRP.ratio.adj = relF.adj)
   # names(F)[7]  = "BRP.ratio"                 # Set up F
   # names(F)[11] = "BRP.ratio.adj"
   
-  SSB = filter(SSB.yr, YEAR == model.lyr) %>% rename(BRP.ratio = relSSB, BRP.ratio.adj = relSSB.adj)
+  SSB = filter(SSB.yr, YEAR == model.lyr) %>% dplyr::rename(BRP.ratio = relSSB, BRP.ratio.adj = relSSB.adj)
   # names(SSB)[7]  = "BRP.ratio"               # Set up SSB
   # names(SSB)[11] = "BRP.ratio.adj"
   
