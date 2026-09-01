@@ -17,7 +17,7 @@ makePresentation <- function(plotStorage = NULL,
          filename = NULL){
 
 # List all files in here::here(), can replace this with whatever folder you have figures stored in
-plotList <- list.files(path = plotStorage, pattern = figureExtension, recursive = TRUE)
+plotList <- list.files(path = plotStorage, pattern = figureExtension, recursive = TRUE, full.names = TRUE)
 nfigure = length(plotList)
 
 slideOut = paste0(outdir, "/", filename, ".qmd")
@@ -34,6 +34,7 @@ if(format == "revealjs"){
 } else if(format == "pptx"){
   write(paste0("format: ", format), slideOut, append = TRUE)
 }
+write("---", slideOut, append = FALSE) # End YAML
 
 for(ifigure in 1:nfigure){
   write(paste0("## Figure", ifigure), slideOut, append = TRUE)
