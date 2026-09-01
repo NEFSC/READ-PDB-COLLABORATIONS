@@ -34,7 +34,7 @@ if(format == "revealjs"){
 } else if(format == "pptx"){
   write(paste0("format: ", format), slideOut, append = TRUE)
 }
-write("---", slideOut, append = FALSE) # End YAML
+write("---", slideOut, append = TRUE) # End YAML
 
 for(ifigure in 1:nfigure){
   write(paste0("## Figure", ifigure), slideOut, append = TRUE)
