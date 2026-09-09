@@ -779,16 +779,9 @@ fillCF <- function(species_itis = NULL,
                                OB_ages = mv_ob_age,
                                borrow_procedure = borrow_procedure,
                                borrow_2020_option = borrow_2020_option)
-      #!!! start of borrowing logic function
       
       # Calculate the final set of missing holes
       alk_unfilled <- borrowed_ages$remaining_gaps
-      
-       
-      #!!! end of borrowing logic function
-      #!!! add call with 1 year of borrowing
-      #!!! add call with multiple years of borrowing
-      #!!! figure out something different to handle 2020 differently? - see what was done last year for plaice
       
       # Final Result Consolidation
       
