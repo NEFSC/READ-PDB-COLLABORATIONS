@@ -101,7 +101,7 @@ makeMTslides <- function(wham_model = NULL,
       for(iregion in 1:n_region){
         write(paste0("## Total catch-at-age for ", fleet_names[ifleet], " fleet"), slideOut, append = TRUE)
         write("", slideOut, append = TRUE) # Must have empty space or plots not pulled into powerpoint
-        write(paste0("![](", paste(plotPath,"input_data", paste0("catch_age_comp_fleet", ifleet,"_region_", iregion, ".png"), sep="/"),")"), slideOut, append = TRUE)
+        write(paste0("![](", paste(plotPath,"input_data", paste0("catch_age_comp_fleet_", ifleet,"_region_", iregion, ".png"), sep="/"),")"), slideOut, append = TRUE)
         write("", slideOut, append = TRUE)
       }
     }
@@ -262,11 +262,11 @@ makeMTslides <- function(wham_model = NULL,
       write("::: {.column width='50%'}", slideOut, append = TRUE)
       #write(index_names[index], slideOut, append = TRUE)
       write("", slideOut, append = TRUE) # Must have empty space or plots not pulled into powerpoint
-      if(multi_wham == TRUE){
-        write(paste0("![](", paste(plotPath,"diagnostics", paste0("Catch_age_comp_osa_resids_index_", index, "_region_", iregion, ".png"), sep="/"),")"), slideOut, append = TRUE) 
-      } else{
+      # if(multi_wham == TRUE){
+      #   write(paste0("![](", paste(plotPath,"diagnostics", paste0("Catch_age_comp_osa_resids_index_", index, "_region_", iregion, ".png"), sep="/"),")"), slideOut, append = TRUE) 
+      # } else{
         write(paste0("![](", paste(plotPath,"diagnostics", paste0("Catch_age_comp_osa_resids_index_", index, ".png"), sep="/"),")"), slideOut, append = TRUE) 
-      }
+      #}
       write(":::", slideOut, append = TRUE)
       
       # OSA column 
@@ -311,12 +311,43 @@ makeMTslides <- function(wham_model = NULL,
     } # End loop over stocks
   } # End loop over regions
   
-  # Retrospective plots: NAA, R, SSB
+  # Retrospective plots: SSB (don't iterate over stocks in multi-wham so labeled differently)
+  for(iregion in 1:n_region){
+    for(istock in 1:n_stock){
+      rho = "SSB"
+      write(paste0("## Mohn's rho: ", rho), slideOut, append = TRUE) # write title
+      write(":::: {.columns}", slideOut, append = TRUE) # Initialize columns
+      # Relative Mohn's rho column column
+      write("::: {.column width='50%'}", slideOut, append = TRUE)
+      write("", slideOut, append = TRUE) # Must have empty space or plots not pulled into powerpoint
+      if(multi_wham == TRUE){
+        write(paste0("![](", paste(plotPath,"retro", paste0("stock_", istock, "_", rho, "_retro_relative.png"), sep="/"),")"), slideOut, append = TRUE) 
+      } else{
+        write(paste0("![](", paste(plotPath,"retro", paste0(rho, "_retro_relative.png"), sep="/"),")"), slideOut, append = TRUE) 
+      }
+      write(":::", slideOut, append = TRUE)
+      
+      # Mohn's rho column 
+      write("::: {.column width='50%'}", slideOut, append = TRUE)
+      #write(index_names[index], slideOut, append = TRUE)
+      write("", slideOut, append = TRUE) # Must have empty space or plots not pulled into powerpoint
+      if(multi_wham == TRUE){
+        write(paste0("![](", paste(plotPath,"retro", paste0("stock_", istock, "_", rho, "_retro.png"), sep="/"),")"), slideOut, append = TRUE) 
+      } else{
+        write(paste0("![](", paste(plotPath,"retro", paste0(rho, "_retro.png"), sep="/"),")"), slideOut, append = TRUE) 
+      }
+      write(":::", slideOut, append = TRUE)
+      
+      write("::::", slideOut, append = TRUE) # End columns
+    } # End loop over stocks
+  } # End loop over regions
+  
+  # Retrospective plots: NAA, R
   for(iregion in 1:n_region){
     if(multi_wham == TRUE){
-      rhoNames <- c("NAA_age_1", "NAA", "SSB")
+      rhoNames <- c("NAA_age_1", "NAA")
     } else{
-      rhoNames <- c("NAA_age1", "NAA", "SSB")
+      rhoNames <- c("NAA_age1", "NAA")
     }
     for(rho in rhoNames){
       write(paste0("## Mohn's rho: ", rho), slideOut, append = TRUE) # write title
