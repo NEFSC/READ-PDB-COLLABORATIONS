@@ -28,7 +28,7 @@ buildFiles <- buildFiles[which(buildFiles %in% tracked_files == TRUE)] # only bu
 ##### Copy documented functions into R folder #####
 file.copy(buildFiles, here::here("R"), overwrite = TRUE) # If documentation removed, empty file with no content will be retained in R folder
 
-##### Add loaded functions to DESCRIPTION file #####
+##### Add loaded packages to DESCRIPTION file #####
 packageFiles <- list.files(path = here::here("R"))
 
 packages <- NULL
@@ -56,7 +56,9 @@ for(ifile in 1:length(packageFiles)){
   writeLines(readFile, here::here("R", packageFiles[ifile]))
 }
 
-##### Add export statement if not already in documentation !!! doesn't add export statements if multiple functions in a file and one already has export statement 
+##### Add export statement if not already in documentation 
+ # !!! doesn't add export statements if multiple functions in a file and one already has export statement 
+ # !!! May not work for large examples or functions with long lists
 export <- NULL
 for(ifile in 1:length(packageFiles)){
   readFile <- readLines(here::here("R", packageFiles[ifile]))
