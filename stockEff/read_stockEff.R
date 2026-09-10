@@ -46,6 +46,7 @@ read_stockEff <- function(doLogin = FALSE,
                           outname = NULL){
   
   #library(httr)
+  #library(keyring)
   
   if(doLogin == TRUE){ # Ask for credentials and establish connection, otherwise assumes connection already exists (e.g. if you don't want to type the credentials every time you call this function within the same script)
     # Log in to stockEff - prompts user to enter username and password
