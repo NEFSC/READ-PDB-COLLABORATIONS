@@ -69,11 +69,11 @@ read_stockEff <- function(doLogin = FALSE,
       res = GET(paste0("https://internal.nefsc.noaa.gov/stockeff/public/products?product=", product[iproduct], "&module=", module, "&species_itis=",species_itis, "&stock_abbrev=",stock_abbrev, "&sex_type=",sex_type, "&mode=",mode, "&source=all&type=csv"))
       stockEff_storage[[iproduct]] <- readr::read_delim(content(res,"text"), delim=",", show_col_types = FALSE) # Read text with comma separation rather than writing .csv to/from local machine
     } else{ # Update to httr2 and use keyring credentials
-      stockEff_storage[[iproduct]] <- httr2::request("https://internal.nefsc.noaa.gov/stockeff/public/products?product=") |>
+      stockEff_storage[[iproduct]] <- httr2::request(paste0("https://internal.nefsc.noaa.gov/stockeff/public/products?product=", product[iproduct], "&module=", module, "&species_itis=",species_itis, "&stock_abbrev=",stock_abbrev, "&sex_type=",sex_type, "&mode=",mode, "&source=all&type=csv")) |>
         httr2::req_auth_basic(username = key_get("user_stockeff"), password = key_get("pw_stockeff")) |>
         httr2::req_options(ssl_verifypeer = 0) |>
         httr2::req_perform() |>
-        httr2::rsp_body_string() |>
+        httr2::rsep_body_string() |>
         readr::read_csv(show_col_types = FALSE)
     }
     #bin <- content(res, "raw")
