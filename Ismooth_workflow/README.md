@@ -5,7 +5,7 @@ A standard workflow for Ismooth uses the PlanBsmooth R package to estimate the m
 The PlanBsmooth R package can be installed using
 
 ```{r, eval=FALSE}
-remotes::install_packages("cmlegault/PlanBsmooth")
+remotes::install_github("cmlegault/PlanBsmooth")
 ```
 
 The Ismooth workflow consists of identifying which surveys to use, whether to lag any of the surveys, and whether to fill any missing or incomplete survey values. 
