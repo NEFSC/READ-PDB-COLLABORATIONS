@@ -8,6 +8,7 @@ library(ggplot2)
 library(dplyr)
 library(tidyr)
 
+#' @title clean_stockeff_survey_data
 #' @description cleans StockEff survey data by filtering on seasons and index type as well as filling holes 
 #' @param data tibble with columns YEAR, SEASON, PURPOSE_CODE, INDEX_TYPE, INDEX (can be read from StockEff csv file, other columns allowed)
 #' @param mypurpose code for survey type in StockEff (NEFSC bottom trawl survey = 10)
@@ -60,6 +61,7 @@ clean_stockeff_survey_data <- function(mydata, mypurpose, myseasons, myindextype
 }
 
 
+#' @title fill_hole
 #' @description fills a hole in the survey time series with average of pre and post values, or just the pre or post value
 #' @param data tibble with columns Year, Series, Index
 #' @param year year to fill hole
@@ -89,6 +91,7 @@ fill_hole <- function(data, year, season, howfill){
 }
 
 
+#' @title plot_6_ts
 #' @description creates standardized plot of tibble resulting from clean_stockeff_survey_data function
 #' @param data tibble with columns Year, Series, Index
 #' @param mytitle character string that will appear at top of plot
@@ -108,6 +111,7 @@ plot_6_ts <- function(data, mytitle){
 }
 
 
+#' @title standardize_and_combine_indices
 #' @description standardizes data by dividing by mean during defined time period and averages the series
 #' @param data tibble with columns Year, Series, Index
 #' @param YearStart data filtered to years >= this value
@@ -132,6 +136,7 @@ standardize_and_combine_indices <- function(data, YearStart, YearEnd, myseries, 
 }
 
 
+#' @title plot_standardized_and_avg
 #' @description plots the results of standardize_and_combine_indices function in a single panel with all series and average labeled
 #' @param data list with std_data and avg tibbles
 #' @param mytitle character string to appear at top of plot
@@ -150,6 +155,7 @@ plot_standardized_and_avg <- function(data, mytitle){
 }
 
 
+#' @title wrapIsmooth
 #' @description wrapper function to standardize and combine time series, optionally plot, and run Ismooth
 #' @param data tibble with columns Year, Series, Index
 #' @param YearStart data filtered to years >= this value
@@ -181,6 +187,7 @@ wrapIsmooth <- function(data, YearStart, YearEnd, myseries, mytitle, mynarm=FALS
 }
 
 
+#' @title filltest
 #' @description compare full time series of data with missing and filled time series to see which is preferred
 #' @param data tibble with columns Year, Series, Index
 #' @param YearStart data filtered to years >= this value
@@ -250,6 +257,7 @@ filltest <- function(data, YearStart, termyearstart, termyearend, myseries, myfi
 }
 
 
+#' @title plot_filltest
 #' @description create three plots from results of filltest function: XY, Difference Distribution, Difference Time Series
 #' @param res tibble resulting from filltest function
 #' @param mytitle character string to appear at top of plot
