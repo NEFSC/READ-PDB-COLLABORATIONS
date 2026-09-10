@@ -1,0 +1,23 @@
+Package: SurveyEvalTools
+Type: Package
+Title: Tools for Evaluating Bottom Trawl Survey Tows
+Version: 0.1.0
+Author: Liz Brooks
+Maintainer: Liz Brooks <liz.brooks@example.com>
+Description: This package contains functions to evaluate and summarize bottom 
+    trawl survey tows, calculating stratum means and producing diagnostic plots.
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+Imports: 
+    tibble,
+    ggplot2,
+    tidyr,
+    readr,
+    dplyr,
+    rstudioapi,
+    here,
+    ggforce,
+    devtools
+Config/roxygen2/version: 8.1.0
