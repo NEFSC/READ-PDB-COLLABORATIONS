@@ -5,7 +5,7 @@
 \title{read_stockEff}
 \usage{
 read_stockEff(
-  doLogin = TRUE,
+  doLogin = FALSE,
   species_itis = NULL,
   stock_abbrev = NULL,
   sex_type = "NONE",
@@ -18,7 +18,7 @@ read_stockEff(
 )
 }
 \arguments{
-\item{doLogin}{A boolean, if TRUE then function will ask for login credentials, if FALSE then function assumes connection has already been made to stockEff and code will use existing global "login" object to run (good option if nesting multiple calls within same R script). Default = TRUE}
+\item{doLogin}{A boolean, if TRUE then function will ask for login credentials, if FALSE then function establishes connection using keyring credentials and updated httr2 package, Default = FALSE}
 
 \item{species_itis}{6 digit ITIS identifying the species for which data should be pulled, no default.}
 

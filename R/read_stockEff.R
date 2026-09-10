@@ -3,7 +3,7 @@
 #' Options allow data to be pulled for different species, stocks, production status, modules, and sex types.
 #' This is essentially an R function wrapper around the "Connecting to StockEff via R" example user guide in confluence.
 #'
-#' @param doLogin A boolean, if TRUE then function will ask for login credentials, if FALSE then function assumes connection has already been made to stockEff and code will use existing global "login" object to run (good option if nesting multiple calls within same R script). Default = TRUE
+#' @param doLogin A boolean, if TRUE then function will ask for login credentials, if FALSE then function establishes connection using keyring credentials and updated httr2 package, Default = FALSE
 #' @param species_itis 6 digit ITIS identifying the species for which data should be pulled, no default.
 #' @param stock_abbrev A string describing the stock abbreviation assigned by stock efficiency (this shows up in the web address for STOCKEFF products), no default.
 #' @param sex_type A string describing the sex type for which data should be pulled (this shows up in the web address for STOCKEFF products), default = "NONE". Common options include "NONE", "MALE", "FEMALE", "UNSEXED"
@@ -35,7 +35,7 @@
 #' - The function cannot query assessment_info.csv products (you will get the following error if you try: "Error in read.table ... more columns than column names")
 #' @export
 
-read_stockEff <- function(doLogin = TRUE,
+read_stockEff <- function(doLogin = FALSE,
                           species_itis = NULL,
                           stock_abbrev = NULL,
                           sex_type = "NONE",
@@ -47,6 +47,7 @@ read_stockEff <- function(doLogin = TRUE,
                           outname = NULL){
   
 #   #library(httr)
+#   #library(keyring)
   
   if(doLogin == TRUE){ # Ask for credentials and establish connection, otherwise assumes connection already exists (e.g. if you don't want to type the credentials every time you call this function within the same script)
     # Log in to stockEff - prompts user to enter username and password
@@ -55,9 +56,8 @@ read_stockEff <- function(doLogin = TRUE,
       password = rstudioapi::askForPassword("Enter password"),
       submit = "true"
     )
-    POST("https://internal.nefsc.noaa.gov/stockeff/public/products?product=", body = login, encode = "form", verbose())
-  }
-  
+    httr::POST("https://internal.nefsc.noaa.gov/stockeff/public/products?product=", body = login, encode = "form", httr::verbose())
+  } 
   
   # Set up storage
   stockEff_storage <- NULL
@@ -66,16 +66,24 @@ read_stockEff <- function(doLogin = TRUE,
   # Pull selected products from stock eff CSV files
   for(iproduct in 1:length(product)){
     
-    # Pull data as binary file & write to temporary csv
-    res = GET(paste0("https://internal.nefsc.noaa.gov/stockeff/public/products?product=", product[iproduct], "&module=", module, "&species_itis=",species_itis, "&stock_abbrev=",stock_abbrev, "&sex_type=",sex_type, "&mode=",mode, "&source=all&type=csv"))
-    bin <- content(res, "raw")
-    writeBin(bin, paste0(outdir,"/temp_stockEff.csv")) ## Name your file something meaningful here if you want to reference outside of R.
+    # Pull data as binary file, format & save in storage object
+    if(doLogin == TRUE){
+      res = GET(paste0("https://internal.nefsc.noaa.gov/stockeff/public/products?product=", product[iproduct], "&module=", module, "&species_itis=",species_itis, "&stock_abbrev=",stock_abbrev, "&sex_type=",sex_type, "&mode=",mode, "&source=all&type=csv"))
+      stockEff_storage[[iproduct]] <- readr::read_delim(content(res,"text"), delim=",", show_col_types = FALSE) # Read text with comma separation rather than writing .csv to/from local machine
+    } else{ # Update to httr2 and use keyring credentials
+      stockEff_storage[[iproduct]] <- httr2::request(paste0("https://internal.nefsc.noaa.gov/stockeff/public/products?product=", product[iproduct], "&module=", module, "&species_itis=",species_itis, "&stock_abbrev=",stock_abbrev, "&sex_type=",sex_type, "&mode=",mode, "&source=all&type=csv")) |>
+        httr2::req_auth_basic(username = key_get("user_stockeff"), password = key_get("pw_stockeff")) |>
+        httr2::req_options(ssl_verifypeer = 0) |>
+        httr2::req_perform() |>
+        httr2::rsep_body_string() |>
+        readr::read_csv(show_col_types = FALSE)
+    }
+    #bin <- content(res, "raw")
+    #writeBin(bin, paste0(outdir,"/temp_stockEff.csv")) ## Name your file something meaningful here if you want to reference outside of R.
     
-    # Read temporary csv into storage object
-    stockEff_storage[[iproduct]] <- read.csv(paste0(outdir,"/temp_stockEff.csv"))
     
     # Remove temporary file
-    file.remove(paste0(outdir,"/temp_stockEff.csv"))
+    #file.remove(paste0(outdir,"/temp_stockEff.csv"))
     
   }
   

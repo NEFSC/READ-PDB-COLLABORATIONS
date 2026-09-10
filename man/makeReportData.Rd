@@ -39,6 +39,9 @@ A list containing the following and saved as an RDS object named "reportData", a
   \item{n_indices - The number of indices in model_MT}
   \item{MT_termyr - A table of MT estimates and rho-adjusted values for F, SSB, and Recruitment terminal year estimates, associated CVs and the BRP ratio}
   \item{prior_termyr - A table of prior assessment estimates and rho-adjusted values for F, SSB, and Recruitment terminal year estimates, associated CVs and the BRP ratio}
+  \item{MT_SSBseries & prior_SSBseries - Tables (current and prior models respectively) of SSB series with SE, CV, 90\% and 95\% CI, relative SSB and rho-adjusted SSB with 90\% CI and adjusted relative SSB}
+  \item{MT_Fseries & prior_Fseries - Tables (current and prior models respectively) of F series with SE, CV, 90\% and 95\% CI, relative F and rho-adjusted F with 90\% CI and adjusted relative F}
+  \item{MT_Rseries & prior_Rseries - Tables (current and prior models respectively) of Recruitment series with SE, CV, 90\% and 95\% CI, and rho-adjusted R with 90\% CI}
 }
 }
 \description{

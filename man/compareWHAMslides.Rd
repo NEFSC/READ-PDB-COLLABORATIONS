@@ -34,7 +34,7 @@ compareWHAMslides(
 
 \item{slideTitle}{A string used for the slide title page}
 
-\item{fleetNames}{A vector of fleet names in the order that they are numbered in plotted results (assumes same fleets for all models, if this isn't the case use fleetGroup instead)}
+\item{fleetNames}{A vector of fleet names in the order that they are provided in plotted results (assumes same fleets for all models, if this isn't the case use fleetGroup instead)}
 
 \item{indexNames}{A vector of index names in the order that they are numbered in plotted results (assumes same indices for all models, if this isn't the case use indexGroup instead)}
 
@@ -56,7 +56,10 @@ compareWHAMslides(
 
 \item{Overfishing}{An optimal vector of overfishing status for each model (order consistent with plotPaths) for inclusion in a summary table}
 
-\item{Rho_adjust}{An optimal vector of rho adjustment checks for each model (order consistent with plotPaths) for inclusion in a summary table}
+\item{Rho_adjust}{An optimal vector of rho adjustment checks for each model (order consistent with plotPaths) for inclusion in a summary table
+
+NOTE: Assumes stock and region names are consistent across multi-wham models OR compare single-wham model that lacks stock/region labels to a multi-wham model
+WARNING: Code was updated to accommodate multi-wham results but the following settings have not been tested thoroughly following these edits: multiple stocks/regions/fleets, indices with non-standard names (i.e. not "index_1", "index_2"...), fleet and index groups (revert to version of function prior to July 2026 for functioning single-wham implementation)}
 
 \item{fleetGroup}{A named list containing a vector of fleet numbers to compare across all models (e.g. if number of fleets or order differs across models specify which fleets should be compared), if provided these names are used to label slides instead of fleetNames. Length of all vectors in list must equal length of plotPaths, provide 0 if fleet does not exist for a given model}
 

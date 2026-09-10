@@ -18,11 +18,11 @@ A list containing the following
   \item{NAA - A table of NAA}
   \item{ FAA - A table of FAA}
   \item{Mohns_rho - A list of Mohn's rho values for F, SSB, and NAA}
-  \item{F.yr - A table containing a time series of F estimates and CVs}
+  \item{F.yr - A table containing a time series of F estimates SE, CV, 90\% and 95\% CI, relative F and rho-adjusted F with 90\% CI and adjusted relative F}
   \item{F.yr_adj - F.yr table with Mohn's rho adjustments}
-  \item{SSB.yr - A table containing a time series of SSB estimates and CVs}
+  \item{SSB.yr - A table containing a time series of SSB estimates, SE, CV, 90\% and 95\% CI, relative SSB and rho-adjusted SSB with 90\% CI and adjusted relative SSB}
   \item{SSB.yr_adj - SSB.yr table with Mohn's rho adjustments}
-  \item{Rect.yr - A table containing a time series of Recruitment and CVs}
+  \item{Rect.yr - A table containing a time series of Recruitment estimates, SE, CV, 90\% and 95\% CI, and rho-adjusted R with 90\% CI}
   \item{Rect.yr_adj - Rect.yr table with Mohn's rho adjustments}
   \item{termyr.ests.cis - A table of terminal year estimates of F, SSB, and Recruitment with 95\% and 90\% CIs}
 }

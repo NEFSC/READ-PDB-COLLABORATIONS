@@ -49,7 +49,7 @@ fillCF(
           if = "SEMESTER", one block for each semester,
           if = "ANNUAL", one block per year for each market category
           if = "checkLENGTHS", Assumes monthly blocks were submitted to STOCKEFF, checks the number of monthly length samples from biosamp_summary.csv to determine smallest block supported by data for each market category and year. Must also provide minLenSample argument if this option is used.}
-  \item{minLenSample - A number specifying the minimum number of length sampels required to support a given block for a year and market category, only required if tab_blocks$block_opt == "checkLENGTHS"}
+  \item{minLenSample - A number specifying the minimum number of length sampels required to support a given block for a year and market category, used in length imputation check even if block_opt != checkLENGTHS, default = 1}
   \item{autofillLW - A boolean, if TRUE fills LW_ID based on complete overlap with LW months and years, if FALSE leaves NAs for blocks without a perfect match to LW month and year definition, default = FALSE}
   \item{mkt_missing - A string to govern years where 1+ market categories not length sampled, default = "keep":
            if = "drop" then these years dropped and NAA is not estimated
@@ -64,7 +64,7 @@ fillCF(
 
 \item{tab_regions}{A list providing the following information to populate the REGIONS tab:
 \itemize{
-  \item{stat_areas - A list of stat area vectors by region. Example: list("1" = c(511, 512))}
+  \item{stat_areas - A list of stat area vectors by region, stat areas should be provided as strings. Example: list("1" = c("511", "512"))}
   \item{region_custom - An optional data.frame/matrix for complex cases. 
         Example: data.frame(AREA = c(511, 512, 511), 
                            REGION_ID = c("1", "1", "2"), 
@@ -77,7 +77,7 @@ fillCF(
   \item{ALPHA - Alpha parameter for each LW relationship}
   \item{BETA - Beta parameter for each LW relationship}
   \item{SOURCE - Description of LW parameter and link to source document}
-  \item{LW_TYPE - Type of LW relationship, options can include "SEMESTER", "ANNUAL", "CUSTOM"}
+  \item{LW_TYPE - Type of LW relationship, options can include "SEMESTER", "ANNUAL", "QUARTER"}
   \item{LW_ID - ID for each row of the table}
   \item{MONTH_START - First month that LW_ID row may be used, processed in tab_BLOCKS and ultimately dropped from tab_LW_PARAMS}
   \item{MONTH_END - Last month that LW_ID row may be used, processed in tab_BLOCKS and ultimately dropped from tab_LW_PARAMS}
@@ -106,12 +106,19 @@ fillCF(
 \item{tab_alk}{A list providing rules for filling gaps in the ALK_HOLES tab:
 \itemize{
   \item{fill_alk - A boolean. If TRUE, identifies lengths present in landings that 
-        lack corresponding age data and attempts to fill them using hierarchical borrowing.}
-  \item{borrow_alk_years - A boolean. Default = FALSE. If TRUE, allows the ALK fill 
-        logic to look at adjacent years (Year - 1 and Year + 1) as a final fallback 
-        if no regional or survey ages are found for the current year.}
-  \item{source - options are "commercial", "survey" or (default) "both". Provides the option of using only
-       one of the available sources for age data in hole filling.}     
+        lack corresponding age data and attempts to fill them using hierarchical borrowing. Default = FALSE.}
+  \item{source - A vector of strings identifying data sources for age data gap filling,options are: "commercial", "survey". Default = "commercial", MUST contain "commercial" or ALK borrowing will trigger error} 
+  \item{borrow_procedure - A string specifying the borrowing logic to apply to fill age gaps for ALK:
+       
+  }
+  \item{borrow_2020_option - A string specifying how 2020 borrowing is handled: 
+           "none" = do not borrow to fill 2020 age gaps (default)
+           "match_borrow_procedure" = use same logic as borrow_procedure argument,
+           
+       } 
+  \item{survey_region - Optional dataframe containing STRATUM and REGION_ID columns specifying the region 
+       assignment for each survey stratum. Only required if multiple regions AND survey data used for 
+       borrowing (i.e. "survey" in source list). Default assigns all survey strata to region 1}   
 }}
 
 \item{tab_exclusions}{An optional (default = NULL) list defining automated filters to remove non-representative biological records:
@@ -137,7 +144,7 @@ fillCF(
 \item{NOTE: tab_blocks$block_opt = checkLENGTHS will NOT work unless connected to the VPN}
 \item{NOTE: ALK_HOLES, and EXCLUSIONS tabs are optionally populated by this function and may need to be filled externally if tab_alk and tab_exclusions arguments are not used to fill gaps.}
 \item{NOTE: If you receive the following error, then the .xlsx file by the provided name already exists and can't be overwritten: [ERROR] workbook_close(): Error creating 'outfile.xlsx'. System error = Permission denied Error: Error in libxlsxwriter: 'Error creating output xlsx file. Usually a permissions error.'}
-\item{NOTE: If you find NAs in the REGION_ID for the BLOCKS tab, then there was a stat area in the {schema}.mv_cf_stock_data_length_o product that was not provided in the tab_regions$stat_areas argument.}
+\item{NOTE: If you find NAs in the REGION_ID for the BLOCKS tab, then there was a stat area in the {schema}.mv_cf_stock_data_length_o product that was not provided in the tab_regions$stat_areas argument. Will also result in REGION_ID = NA in ALKHOLES tab.}
 }}
 }
 \value{
