@@ -75,7 +75,7 @@ read_stockEff <- function(doLogin = FALSE,
         httr2::req_auth_basic(username = key_get("user_stockeff"), password = key_get("pw_stockeff")) |>
         httr2::req_options(ssl_verifypeer = 0) |>
         httr2::req_perform() |>
-        httr2::rsep_body_string() |>
+        httr2::resp_body_string() |>
         readr::read_csv(show_col_types = FALSE)
     }
     #bin <- content(res, "raw")
