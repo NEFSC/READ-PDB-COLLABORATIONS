@@ -266,7 +266,7 @@ filltest <- function(data, YearStart, termyearstart, termyearend, myseries, myfi
 #' 
 #' @return list with three plots and root mean square error between multipliers using all data and treatments
 plot_filltest <- function(res, mytitle, printplots=FALSE){
-  p1 <- ggplot(northfilltest, aes(x=Mult_All, y=Multiplier, color=Treatment)) +
+  p1 <- ggplot(res, aes(x=Mult_All, y=Multiplier, color=Treatment)) +
     geom_point() +
     geom_abline(slope = 1, linetype="dashed") +
     geom_smooth(method='lm') +
