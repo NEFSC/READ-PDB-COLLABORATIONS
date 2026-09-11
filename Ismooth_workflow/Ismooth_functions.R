@@ -196,9 +196,10 @@ wrapIsmooth <- function(data, YearStart, YearEnd, myseries, mytitle, mynarm=FALS
 #' @param termyearend last year of terminal years to be used in analysis
 #' @param myseries vector of series names in quotes that subsets the Series column
 #' @param myfilltests tibble with columns relYear, Series, Howfill where relYear is the year relative to the terminal year in each evaluation
+#' @param mynarm Boolean to remove NA values when calculating annual average index, default=FALSE
 #'
 #' @return tibble with columns TermYear (terminal year for that evaluation), Mult_All (Ismooth multiplier using all data), Treatment (either Filled or Missing), Multiplier (Ismooth multiplier for that Treatment), error (Multiplier - Mult_All)
-filltest <- function(data, YearStart, termyearstart, termyearend, myseries, myfilltests){
+filltest <- function(data, YearStart, termyearstart, termyearend, myseries, myfilltests, mynarm=FALSE){
   
   termyears <- seq(termyearstart, termyearend)
   ntermyears <- length(termyears)
@@ -235,9 +236,9 @@ filltest <- function(data, YearStart, termyearstart, termyearend, myseries, myfi
     }
     
     # run Ismooth on all three datasets
-    resall <- wrapIsmooth(dall, YearStart, thistermyear, myseries, NULL, FALSE)
-    resmiss <- wrapIsmooth(dmiss, YearStart, thistermyear, myseries, NULL, FALSE)
-    resfill <- wrapIsmooth(dfill, YearStart, thistermyear, myseries, NULL, FALSE)
+    resall <- wrapIsmooth(dall, YearStart, thistermyear, myseries, NULL, FALSE, FALSE)
+    resmiss <- wrapIsmooth(dmiss, YearStart, thistermyear, myseries, NULL, mynarm, FALSE)
+    resfill <- wrapIsmooth(dfill, YearStart, thistermyear, myseries, NULL, FALSE, FALSE)
     
     # collect multipliers
     multall[iyear] <- round(resall$Ismooth$multiplier, 3)
