@@ -167,7 +167,8 @@ plot_standardized_and_avg <- function(data, mytitle){
 #' 
 #' @return list with std_data tibble, avg tibble, standardized and average plot, and Ismooth results
 wrapIsmooth <- function(data, YearStart, YearEnd, myseries, mytitle, mynarm=FALSE, print_plots=FALSE){
-  sadata <- standardize_and_combine_indices(data, YearStart, YearEnd, myseries)
+  
+  sadata <- standardize_and_combine_indices(data, YearStart, YearEnd, myseries, mynarm)
   
   sap <- plot_standardized_and_avg(sadata, mytitle)
   
