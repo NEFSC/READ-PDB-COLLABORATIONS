@@ -1,0 +1,275 @@
+---
+title: "Interested Reader Results"
+author: "Chris Legault"
+date: today
+date-format: long
+format:
+ html:
+    code-fold: true
+    embed-resources: true 
+    toc: true
+warning: false
+---
+
+## BLUF
+
+The Monkfish Ismooth document left two exercises for the interested reader. This document shows how they could be completed.
+
+## Exercise 1 mynarm
+
+In the first exercise, the multipliers are compared for both stocks of monkfish when the mynarm setting is FALSE (the default) to when it is TRUE. As a reminder, the mynarm setting determines how to compute the average of surveys when there is a missing survey in a given year. When mynarm is FALSE, the result is NA, while when mynarm is TRUE, the result is the average of the available surveys. For monkfish, which uses only two surveys, this means that when one survey is missing, mynarm=FALSE results in NA for that year while mynarm=TRUE results in the available survey for that year.
+
+```{r exercise 1}
+source("Ismooth_functions.R")
+
+# defined once to prevent copy/paste errors
+mypurpose <- 10
+myseasons <- c("SPRING", "FALL")
+myindextype <- "Biomass (kg/tow)"
+
+myfills_north <- tibble(Year = c(2020, 2020, 2023),
+                        Series = c("SPRING", "FALL", "SPRING"),
+                        Howfill = c("avg", "avg", "avg"))
+
+myfills_south <- tibble(Year = c(2020, 2020, 2023, 2017),
+                        Series = c("SPRING", "FALL", "SPRING", "FALL"),
+                        Howfill = c("avg", "avg", "avg", "avg"))
+
+monkpath <- "monkfish_StockEff_csvs"
+
+# North
+myfilename <- "STOCKEFF_SV_164499_NORTH_NONE_strat_mean.csv"
+mydata <- read.csv(file.path(monkpath, myfilename))
+
+north <- clean_stockeff_survey_data(mydata, mypurpose, myseasons, myindextype, myfills_north)
+
+
+# South
+myfilename <- "STOCKEFF_SV_164499_SOUTH_NONE_strat_mean.csv"
+mydata <- read.csv(file.path(monkpath, myfilename))
+
+south <- clean_stockeff_survey_data(mydata, mypurpose, myseasons, myindextype, myfills_south)
+
+lastyear <- max(north$Year)
+
+nfalse <- wrapIsmooth(north, 1964, lastyear, c("SPRING", "FALL_LAGGED"), "North Filled mynarm=FALSE")
+sfalse <- wrapIsmooth(south, 1964, lastyear, c("SPRING", "FALL_LAGGED"), "South Filled mynarm=FALSE")
+
+ntrue <- wrapIsmooth(north, 1964, lastyear, c("SPRING", "FALL_LAGGED"), "North Filled mynarm=TRUE", TRUE)
+strue <- wrapIsmooth(south, 1964, lastyear, c("SPRING", "FALL_LAGGED"), "South Filled mynarm=TRUE", TRUE)
+
+```
+
+:::: {.panel-tabset}
+
+#### Multiplier Plot
+
+::: {.panel-tabset}
+
+##### North FALSE
+```{r}
+print(nfalse$Ismooth$tsplot)
+```
+##### North TRUE
+```{r}
+print(ntrue$Ismooth$tsplot)
+```
+##### South FALSE
+```{r}
+print(sfalse$Ismooth$tsplot)
+```
+##### South TRUE
+```{r}
+print(strue$Ismooth$tsplot)
+```
+:::
+
+#### Survey Average Plot
+
+::: {.panel-tabset}
+
+##### North FALSE
+```{r}
+print(nfalse$sap)
+```
+##### North TRUE
+```{r}
+print(ntrue$sap)
+```
+##### South FALSE
+```{r}
+print(sfalse$sap)
+```
+##### South TRUE
+```{r}
+print(strue$sap)
+```
+:::
+
+::::
+
+The results show there is in fact a difference between using a single season's value as the average versus removing years when only one season is present. These differences are most clearly seen in the Survey Average Plot by flipping back and forth between the North FALSE and North TRUE and then flipping back and forth between the South FALSE and South TRUE. The years using only a single season appear in the TRUE plot as black dots while those years show only the colored dot in the FALSE plot. 
+
+Since the multipliers differ for both stocks depending on the mynarm options selected, this example can be followed all the way through fill tests to see which mynarm option is preferred as well as whether the filled or missing treatment is preferred.
+
+```{r}
+set.seed(14) # for reproducability of jitter plots
+
+myfilltests_n <- tibble(relYear = c(-3, -6, -5),
+                        Series = c("SPRING", "SPRING", "FALL_LAGGED"),
+                        Howfill = c("avg", "avg", "avg"))
+
+north_ftfalse <- filltest(north, 1968, 1987, 2019, c("SPRING", "FALL_LAGGED"), myfilltests_n, FALSE)
+north_ftfalse_plots <- plot_filltest(north_ftfalse, "North", FALSE)
+
+north_fttrue <- filltest(north, 1968, 1987, 2019, c("SPRING", "FALL_LAGGED"), myfilltests_n, TRUE)
+north_fttrue_plots <- plot_filltest(north_fttrue, "North", FALSE)
+
+myfilltests_s <- myfilltests_n |>
+  add_row(relYear = -8, Series = "FILLED_FALL_LAGGED", Howfill = "avg")
+
+south_ftfalse <- filltest(south, 1968, 1987, 2017, c("SPRING", "FILLED_FALL_LAGGED"), myfilltests_s, FALSE)
+south_ftfalse_plots <- plot_filltest(south_ftfalse, "South", FALSE)
+
+south_fttrue <- filltest(south, 1968, 1987, 2017, c("SPRING", "FILLED_FALL_LAGGED"), myfilltests_s, TRUE)
+south_fttrue_plots <- plot_filltest(south_fttrue, "South", FALSE)
+```
+
+:::: {.panel-tabset}
+
+#### North FALSE
+
+::: {.panel-tabset}
+##### XY Plot
+```{r}
+print(north_ftfalse_plots$p1)
+```
+##### Difference Distribution Plot
+```{r}
+print(north_ftfalse_plots$p2)
+```
+##### Difference Time Series Plot
+```{r}
+print(north_ftfalse_plots$p3)
+```
+:::
+
+#### North TRUE
+
+::: {.panel-tabset}
+##### XY Plot
+```{r}
+print(north_fttrue_plots$p1)
+```
+##### Difference Distribution Plot
+```{r}
+print(north_fttrue_plots$p2)
+```
+##### Difference Time Series Plot
+```{r}
+print(north_fttrue_plots$p3)
+```
+:::
+
+#### South FALSE
+
+::: {.panel-tabset}
+##### XY Plot
+```{r}
+print(south_ftfalse_plots$p1)
+```
+##### Difference Distribution Plot
+```{r}
+print(south_ftfalse_plots$p2)
+```
+##### Difference Time Series Plot
+```{r}
+print(south_ftfalse_plots$p3)
+```
+:::
+
+#### South TRUE
+
+::: {.panel-tabset}
+##### XY Plot
+```{r}
+print(south_fttrue_plots$p1)
+```
+##### Difference Distribution Plot
+```{r}
+print(south_fttrue_plots$p2)
+```
+##### Difference Time Series Plot
+```{r}
+print(south_fttrue_plots$p3)
+```
+:::
+
+::::
+
+Although it is difficult to see due to changes in the y-axis ranges, the results for the filled treatment are the same for each stock because the filled treatment is not impacted by the mynarm selection. This can be confirmed by looking at the RMSE value in the Difference Distribution Plots (e.g., for the North stock `r north_ftfalse_plots$rmse$label_text[1]` for both mynarm equals FALSE and TRUE). However, the missing treatment differs depending on the mynarm selection, with TRUE providing a lower RMSE for both stocks compared to FALSE. For the south stock, the TRUE option actually outperforms the filled treatment. This demonstrates that filled does not always perform better than missing, and how the missing values are treated matters.
+
+## Exercise 2 Fall 25 Fill Test
+
+The second exercise for the interested reader is to conduct a fill test for the scenario when the Fall 2025 bottom trawl survey is not considered sufficient to use as an index of abundance for the north stock. Following up on exercise 1, the two mynarm options are compared through fill test, along with the standard comparison of filled versus missing treatments.
+
+```{r exercise_2}
+#| output: false
+
+checkfall26 <- north |>
+  filter(Year == 2026, Series == "FALL")
+
+if (is.na(checkfall26$Index[1])){
+  fillfall25 <- "pre"
+} else {
+  fillfall25 <- "avg"
+}
+
+myfilltests_nf25 <- myfilltests_n |>
+  add_row(relYear = 0, Series = "FALL_LAGGED", Howfill = "pre")
+
+nf25_ftfalse <- filltest(north, 1968, 1987, 2019, c("SPRING", "FALL_LAGGED"), myfilltests_nf25, FALSE)
+nf25_ftfalse_plots <- plot_filltest(nf25_ftfalse, "North Fall 25 FALSE", FALSE)
+
+nf25_fttrue <- filltest(north, 1968, 1987, 2019, c("SPRING", "FALL_LAGGED"), myfilltests_nf25, TRUE)
+nf25_fttrue_plots <- plot_filltest(nf25_fttrue, "North Fall 25 TRUE", FALSE)
+```
+
+:::: {.panel-tabset}
+
+#### North Fall 25 FALSE
+
+::: {.panel-tabset}
+##### XY Plot
+```{r}
+print(nf25_ftfalse_plots$p1)
+```
+##### Difference Distribution Plot
+```{r}
+print(nf25_ftfalse_plots$p2)
+```
+##### Difference Time Series Plot
+```{r}
+print(nf25_ftfalse_plots$p3)
+```
+:::
+
+#### North Fall 25 TRUE
+::: {.panel-tabset}
+##### XY Plot
+```{r}
+print(nf25_fttrue_plots$p1)
+```
+##### Difference Distribution Plot
+```{r}
+print(nf25_fttrue_plots$p2)
+```
+##### Difference Time Series Plot
+```{r}
+print(nf25_fttrue_plots$p3)
+```
+:::
+
+::::
+
+Here the filled treatment outperforms both missing treatments (mynarm = FALSE or TRUE), althought the TRUE option does better than the FALSE option.  
