@@ -55,13 +55,17 @@
 #'   \item{start_yr - The start year for CF data, default = first year in data_years.}
 #'   \item{end_yr - The end year for CF data, default = last year in data_years.}
 #' }
-#' @param tab_impute A list providing rules for filling sampling gaps in the LENGTH_IMPUTATIONS tab:
+#' @param tab_impute A list providing rules for filling sampling gaps in the LENGTH_IMPUTATIONS tab, tab_blocks$minLenSample used to ID holes requiring imputation, if null then no imputations provided (default):
 #' \itemize{
-#'   \item{borrow_from_region - A named list defining spatial donor relationships. 
+#'   \item{borrow_procedure - A string specifying the borrowing logic to apply to provide length imputations, options include:
+#'            "default" - 
+#'            Check documentation for borrow_lengths for most up-to-date borrowing options
+#'   }
+#'   \item{borrow_from_region - Optional argument required if borrow_procedure = "default", A named list defining spatial donor relationships. 
 #'         Example: list("5" = "6") means if Region 5 has a sampling hole, 
 #'         borrow the length-frequency distribution from Region 6 for that same 
 #'         Year and Market Category.}
-#'   \item{borrow_from_time - A boolean. If TRUE, triggers the constrained temporal 
+#'   \item{borrow_from_time - Optional argument required if borrow_procedure = "default", A boolean. If TRUE, triggers the constrained temporal 
 #'         hierarchy if spatial borrowing fails or is not defined. 
 #'         The hierarchy follows: Same Semester (for Quarter holes) > 
 #'         Same Year (for Semester holes) > Adjacent Years (for Year holes).}
@@ -74,14 +78,18 @@
 #         logic to look at adjacent years (Year - 1 and Year + 1) as a final fallback 
 #         if no regional or survey ages are found for the current year.}
 #'   \item{source - A vector of strings identifying data sources for age data gap filling,options are: "commercial", "survey". Default = "commercial", MUST contain "commercial" or ALK borrowing will trigger error} 
-#'   \item{borrow_procedure - A string specifying the borrowing logic to apply to fill age gaps for ALK:
-#'        
+#'   \item{survey_strata - A vector of survey strata to include in borrowing, required if "survey" in source vector. No default.}
+#'   \item{borrow_procedure - A string specifying the borrowing logic to apply to fill age gaps for ALK, options include:
+#'            "seqCFSV_S_A" - Default, Borrow: 1) CF within semester, 2) CF within year, 3) SV within semester, 4) SV within year
+#'            "seqSA_CF_SV" - Borrow: 1) CF within semester (i.e. pool mkt categories), 2) SV within semester, 3) CF within year, 4) SV within year
+#'            Check documentation for borrow_ages function for most up-to-date borrowing options
 #'   }
-#'   \item{borrow_2020_option - A string specifying how 2020 borrowing is handled: 
-#'            "none" = do not borrow to fill 2020 age gaps (default)
-#'            "match_borrow_procedure" = use same logic as borrow_procedure argument,
-#'            
-#'        } 
+#'   \item{borrow_2020_option - A string specifying how 2020 borrowing is handled, options include: 
+#'            Default uses borrow_procedure to fill 2020 gaps, in most cases this results in no gap filling because borrowing does not occur across years
+#'            "none" = do not borrow to fill 2020 age gaps
+#'            "combCFSV_1921" = Combine CF and SV data, fill 2020 using all observations from 2019 and 2021
+#'            Check documentation for borrow_ages function for most up-to-date borrowing options
+#'   } 
 #'   \item{survey_region - Optional dataframe containing STRATUM and REGION_ID columns specifying the region 
 #'        assignment for each survey stratum. Only required if multiple regions AND survey data used for 
 #'        borrowing (i.e. "survey" in source list). Default assigns all survey strata to region 1}   
@@ -386,8 +394,6 @@ fillCF <- function(species_itis = NULL,
   
   ### BLOCKS tab #####
   
-  ##  if(tab_blocks$block_opt == "checkLENGTHS"){  ### Sam's suggested edit, moved this line
-  #cli::cli_alert_info("Querying length-frequency data for {species_itis}...")
   target_nespp4 <- stringr::str_pad(as.character(tab_blocks$nespp4), 
                                     width = 4, side = "left", pad = "0")
   
@@ -401,7 +407,7 @@ fillCF <- function(species_itis = NULL,
   }, error = function(e) { stop("Length query failed.") })
   
   raw_lens <- raw_lens |> 
-    filter(YEAR %in% data_years) |> # Only consider commercial data within data_years range of interest
+    dplyr::filter(YEAR %in% data_years) |> # Only consider commercial data within data_years range of interest
     dplyr::mutate(NESPP4 = as.character(NESPP4), 
                   AREA = stringr::str_trim(as.character(AREA)),
                   YEAR = as.numeric(YEAR), 
@@ -410,23 +416,26 @@ fillCF <- function(species_itis = NULL,
     dplyr::left_join(tab_REGIONS |> dplyr::select(AREA, YEAR, REGION_ID), 
                      by = c("AREA", "YEAR"))
   
-  sampling_summary <- raw_lens |>
-    dplyr::group_by(YEAR, NESPP4, REGION_ID) |>
-    dplyr::summarise(
-      q_pass = all(purrr::map_lgl(1:4, 
-                                  \(x) sum(NO_AT_LENGTH[QTR == x], na.rm = TRUE) >= tab_blocks$minLenSample)), # Check that all quarters have minLenSample
-      s_pass = (sum(NO_AT_LENGTH[QTR %in% c(1,2)], na.rm = TRUE) >= tab_blocks$minLenSample & 
-                  sum(NO_AT_LENGTH[QTR %in% c(3,4)], na.rm = TRUE) >= tab_blocks$minLenSample),
-      a_pass = (sum(NO_AT_LENGTH, na.rm = TRUE) >= tab_blocks$minLenSample), 
-      .groups = "drop"
-    ) |>
-    dplyr::mutate(BLOCK_TYPE = dplyr::case_when(
-      is.na(REGION_ID) ~ "Insufficient_Samples", 
-      q_pass ~ "QUARTER", 
-      s_pass ~ "SEMESTER", 
-      a_pass ~ "ANNUAL", 
-      .default = "Insufficient_Samples"
-    ))
+  if(tab_blocks$block_opt == "checkLENGTHS" | !is.null(tab_impute)){# Generate length sampling summary if checkLENGTHS for blocks OR providing length imputations
+    sampling_summary <- raw_lens |>
+      dplyr::group_by(YEAR, NESPP4, REGION_ID) |>
+      dplyr::summarise(
+        q_pass = all(purrr::map_lgl(1:4, 
+                                    \(x) sum(NO_AT_LENGTH[QTR == x], na.rm = TRUE) >= tab_blocks$minLenSample)), # Check that all quarters have minLenSample
+        s_pass = (sum(NO_AT_LENGTH[QTR %in% c(1,2)], na.rm = TRUE) >= tab_blocks$minLenSample & 
+                    sum(NO_AT_LENGTH[QTR %in% c(3,4)], na.rm = TRUE) >= tab_blocks$minLenSample),
+        a_pass = (sum(NO_AT_LENGTH, na.rm = TRUE) >= tab_blocks$minLenSample), 
+        .groups = "drop"
+      ) |>
+      dplyr::mutate(BLOCK_TYPE = dplyr::case_when(
+        is.na(REGION_ID) ~ "Insufficient_Samples", 
+        q_pass ~ "QUARTER", 
+        s_pass ~ "SEMESTER", 
+        a_pass ~ "ANNUAL", 
+        .default = "Insufficient_Samples"
+      ))
+  } # End if statement for summarizing length sampling 
+
   
   if(tab_blocks$block_opt == "checkLENGTHS"){    
     tempBlock <- sampling_summary |>
@@ -518,10 +527,11 @@ fillCF <- function(species_itis = NULL,
   
   if(!is.null(tab_impute)) {
     cli::cli_alert_info("Scanning for sampling gaps using hierarchical borrowing...")
-    raw_lens <- raw_lens |> 
+    raw_lens_impute <- raw_lens |> 
       dplyr::mutate(SEM = dplyr::case_when(QTR %in% c(1,2) ~ 1, 
                                            QTR %in% c(3,4) ~ 2, 
                                            .default = NA))
+    # ID year, market category, and regions that have insufficient length samples (less than tab_block$minLenSample)
     holes <- sampling_summary |> 
       dplyr::filter(!is.na(REGION_ID), 
                     BLOCK_TYPE == "Insufficient_Samples") |> 
@@ -529,51 +539,17 @@ fillCF <- function(species_itis = NULL,
       dplyr::distinct()
     
     if(nrow(holes) > 0) {
-      imputed_data_list <- list()
-      for(i in 1:nrow(holes)) {
-        h_yr <- holes$YEAR[i]; h_mkt <- holes$NESPP4[i]; h_reg <- holes$REGION_ID[i]
-        donor_data <- NULL
-        if(!is.null(tab_impute$borrow_from_region)) {
-          s_reg <- tab_impute$borrow_from_region[[as.character(h_reg)]]
-          if(!is.null(s_reg)) {
-            donor_data <- raw_lens |> 
-              dplyr::filter(YEAR == h_yr, NESPP4 == h_mkt, REGION_ID == s_reg) |> 
-              dplyr::mutate(SOURCE = paste0("IMPUTE_REG_", s_reg))
-          }
-        }
-        if(is.null(donor_data) || nrow(donor_data) == 0) {
-          target_sem <- ifelse(any(tempBlock$MONTH_START[tempBlock$YEAR == h_yr] <= 6), 1, 2)
-          donor_data <- raw_lens |> 
-            dplyr::filter(YEAR == h_yr, NESPP4 == h_mkt, REGION_ID == h_reg, SEM == target_sem) |> 
-            dplyr::mutate(SOURCE = paste0("IMPUTE_TIME_SEM_", target_sem))
-          if(nrow(donor_data) == 0) {
-            donor_data <- raw_lens |> 
-              dplyr::filter(YEAR == h_yr, NESPP4 == h_mkt, REGION_ID == h_reg) |> 
-              dplyr::mutate(SOURCE = "IMPUTE_TIME_ANNUAL")
-          }
-          if(nrow(donor_data) == 0) {
-            donor_data <- raw_lens |> 
-              dplyr::filter(YEAR %in% c(h_yr-1, h_yr+1), NESPP4 == h_mkt, REGION_ID == h_reg) |> 
-              dplyr::mutate(SOURCE = "IMPUTE_TIME_ADJ_YR")
-          }
-        }
-        if(!is.null(donor_data) && nrow(donor_data) > 0) {
-          donor_agg <- donor_data |> 
-            dplyr::group_by(LENGTH, SOURCE) |> 
-            dplyr::summarise(NO_AT_LENGTH = sum(NO_AT_LENGTH, na.rm = TRUE), .groups = "drop") |>
-            dplyr::mutate(YEAR = h_yr, NESPP4 = h_mkt, REGION_ID = h_reg, 
-                          SPECIES_ITIS = species_itis, STOCK_ABBREV = stock_abbrev, 
-                          SEX_TYPE = sex_type, ASSESSMENT_ABBREV = assessment_abbrev, 
-                          SA_YEAR = assessment_year, LENGTH_UOM = "CM", BLOCK_ID = "1")
-          imputed_data_list[[length(imputed_data_list) + 1]] <- donor_agg
-        }
-      }
+      
+      imputed_data_list <- borrow_lengths(missing_lengths = holes,
+                                          borrow_procedure = tab_impute$borrow_procedure)
+      
+      # If imputed values provided, append to length imputation tab
       if(length(imputed_data_list) > 0) {
         tab_LENGTH_IMPUTATIONS <- dplyr::bind_rows(imputed_data_list) |> 
           dplyr::select(dplyr::all_of(names(tab_LENGTH_IMPUTATIONS)))
       }
-    }
-  }
+    } # End check if length holes exist
+  } # End of fill for tab_impute
   
   ##### ALK_HOLES tab #####
   ## Set defaults
@@ -589,10 +565,7 @@ fillCF <- function(species_itis = NULL,
   } else{ # If filling ALK holes, print type of source data used
     cli::cli_alert_info("Identifying ALK holes via Hybrid Year Logic (Source: {alk_source_opt})...") # Only print if actually using
   }
-  # borrow_procedure default = "none" - only used if tab_alk$fill_alk == TRUE
-  if(is.null(tab_alk$borrow_procedure)){
-    tab_alk$borrow_procedure <- "none"
-  }
+  # borrow_procedure default follow borrow_ages setting, only used if tab_alk$fill_alk == TRUE
   # survey_region default assigned below
   
   
@@ -603,9 +576,6 @@ fillCF <- function(species_itis = NULL,
                               "NESPP4", "ASSESSMENT_ABBREV", "SA_YEAR", "SOURCE"))
   
   if(isTRUE(tab_alk$fill_alk)) {
-    
-
-    
     #search_yrs <- (min(data_years) - 1):(max(data_years) + 1)
     #Remove the +1 / -1 buffer. Only search what the user defined.
     # search_yrs <- data_years # use data_years in queries below so this line redundant
@@ -639,7 +609,8 @@ fillCF <- function(species_itis = NULL,
               'YEAR' AS AGE_UOM           -- Aligned with CAMS
             FROM {schema}.MV_CF_AGE_NEFSC 
             WHERE SPECIES_ITIS = '{species_itis}' 
-              AND YEAR IN ({paste(y_leg, collapse = ',')})")
+              AND YEAR IN ({paste(y_leg, collapse = ',')})
+              AND AREA IN ({paste(unique(tab_REGIONS$AREA), collapse = ',')})") # Ensure correct data pulled for multi-stock species
         }
         
         if(any(data_years >= 2020)) {
@@ -665,10 +636,11 @@ fillCF <- function(species_itis = NULL,
               AGE_UOM
             FROM {schema}.MV_CF_AGE_CAMS 
             WHERE SPECIES_ITIS = '{species_itis}' 
-              AND YEAR IN ({paste(y_cams, collapse = ',')})")
+              AND YEAR IN ({paste(y_cams, collapse = ',')})
+              AND AREA IN ({paste(unique(tab_REGIONS$AREA), collapse = ',')})") # Ensure correct data pulled for multi-stock species
         }
         
-        raw_cf_res <- purrr::map_dfr(q_parts, \(x) mutate(ROracle::dbGetQuery(conn, x),
+        raw_cf_res <- purrr::map_dfr(q_parts, \(x) dplyr::mutate(ROracle::dbGetQuery(conn, x),
                                                           QTR = as.numeric(QTR), # Make sure that variables of same type across legacy and cams data 
                                                           AGESTRCT = as.numeric(AGESTRCT))) 
         
@@ -697,11 +669,13 @@ fillCF <- function(species_itis = NULL,
     # Query survey age database if option is 'both' or 'survey'
     mv_sv_age <- NULL
     if("survey" %in% alk_source_opt) {
+      if(is.null(tab_alk$survey_strata)){stop("Error: tab_alk$survey_strata not provided")}
       mv_sv_age <- tryCatch({
         sql_sv <- glue::glue("SELECT YEAR, SEASON, LENGTH, AGE, AGE_NO as NO_AT_AGE, STRATUM,
                               CRUISE6 as SOURCE FROM {schema}.MV_SV_AGE 
                               WHERE SPECIES_ITIS = '{species_itis}' 
-                              AND YEAR BETWEEN {min(data_years)} AND {max(data_years)}")
+                              AND YEAR BETWEEN {min(data_years)} AND {max(data_years)}
+                              AND STRATUM IN ({paste(tab_alk$survey_strata, collapse = ',')})") # Ensure correct data pulled for multi-stock species 
                               ###AND YEAR BETWEEN {min(data_years) - 1} AND {max(data_years) + 1}")
         ROracle::dbGetQuery(conn, sql_sv)
       }, error = function(e) { return(NULL) })
@@ -754,23 +728,42 @@ fillCF <- function(species_itis = NULL,
     ###### Gap Analysis Logic ######
     # Check ALK gaps against expanded lengths since this is the product that feeds into the age expansion
     expanded_lens <- tryCatch({
-      sql_expandLen <- glue::glue("SELECT YEAR, NESPP4, BLOCK_ID, REGION_ID,  LENGTH, NO_AT_LENGTH 
+      sql_expandLen <- glue::glue("SELECT YEAR, NESPP4, BLOCK_ID, REGION_ID,  LENGTH, NO_AT_LENGTH, STOCK_ABBREV 
                          FROM {schema}.mv_cf_wgt_and_no_at_length_j
                          WHERE species_itis = '{species_itis}' 
-                         AND year BETWEEN {min(data_years)} AND {max(data_years)}")
+                         AND year BETWEEN {min(data_years)} AND {max(data_years)}
+                         AND STOCK_ABBREV = '{stock_abbrev}'") # Ensure correct data pulled for multi-stock species
       ROracle::dbGetQuery(conn, sql_expandLen) 
     }, error = function(e) { stop("Length query failed.") })
     
     # Filter landings to find length classes that lack age samples in the chosen source(s)
-    alk_needs <- expanded_lens |> #!!! START HERE, expanded_lens pulls in blocking but the blocking doesn't have quarter or semester assignments so may need to pull this in separately so consistent downstream grouping in code even if blocking varies across applications
+    #expanded_lens <- expanded_lens %>% mutate(BLOCK_ID = substring(BLOCK_ID,2,2)) #!!! for scup testing
+    alk_needs <- expanded_lens |> #expanded_lens pulls in blocking but the blocking doesn't have quarter or semester assignments so added separately so consistent downstream grouping in code even if blocking varies across applications
       # raw_lens |>
       # dplyr::mutate(SEM = dplyr::case_when(QTR %in% c(1,2) ~ 1, 
       #                                      QTR %in% c(3,4) ~ 2, 
       #                                      .default = NA)) |>
+      group_by(YEAR) %>% 
+      mutate(REGION_ID = as.character(REGION_ID),
+             n_block = length(unique(BLOCK_ID)), 
+             SEM = case_when(n_block == 1 ~ NA,               # No way to assign semester if annual blocking
+                             n_block == 2 & BLOCK_ID == 1 ~ 1, 
+                             n_block == 2 & BLOCK_ID == 2 ~ 2,
+                             n_block == 4 & BLOCK_ID == 1 ~ 1,
+                             n_block == 4 & BLOCK_ID == 2 ~ 1,
+                             n_block == 4 & BLOCK_ID == 3 ~ 2,
+                             n_block == 4 & BLOCK_ID == 4 ~ 2), 
+             QTR = case_when(n_block == 1 ~ NA,
+                             n_block == 2 & BLOCK_ID == 1 ~ NA, # No way to assign QTR to semester or annual blocking
+                             n_block == 2 & BLOCK_ID == 2 ~ NA,
+                             n_block == 4 & BLOCK_ID == 1 ~ 1,
+                             n_block == 4 & BLOCK_ID == 2 ~ 2,
+                             n_block == 4 & BLOCK_ID == 3 ~ 3,
+                             n_block == 4 & BLOCK_ID == 4 ~ 4)) |> 
       dplyr::anti_join(dplyr::bind_rows(mv_cf_age) |> dplyr::filter(YEAR %in% data_years), # Don't anti_join to anything except CF so alk_needs shows year/region/semester/mkt category in the expanded lengths that do not have commercial ages (no age in CF) - borrowing procedure governs how these filled/what other data to include in ALK alongside CF (e.g. could use all SV data along with CF)
-                       by = c("YEAR", "REGION_ID", "LENGTH", "NESPP4", "SEM")) |> # this will break if "commercial" not in tab_alk$source
+                       by = c("YEAR", "REGION_ID", "LENGTH", "NESPP4", "SEM", "QTR")) |> # this will break if "commercial" not in tab_alk$source
       dplyr::select(YEAR, NESPP4, REGION_ID, LENGTH, SEM, QTR) |> 
-      dplyr::distinct() 
+      dplyr::distinct()
     
     if(nrow(alk_needs) > 0) {
       borrowed_ages <- borrow_ages(missing_ages = alk_needs,
@@ -787,7 +780,8 @@ fillCF <- function(species_itis = NULL,
       
       # Fill gaps based on blocking
       blocked_borrowed <- borrowed_ages$all_fills |>
-        left_join(select(tab_BLOCKS, YEAR, NESPP4, REGION_ID, BLOCK_TYPE), by = c("YEAR", "REGION_ID", "NESPP4"), relationship = "many-to-many")  # Add block type for a given year, market category, and region_id 
+        left_join(select(tab_BLOCKS, YEAR, NESPP4, REGION_ID, BLOCK_TYPE), by = c("YEAR", "REGION_ID", "NESPP4"), relationship = "many-to-many") |> # Add block type for a given year, market category, and region_id 
+        distinct()
       
       # Annual blocking
       annual_borrowed <- blocked_borrowed %>% 
@@ -802,7 +796,7 @@ fillCF <- function(species_itis = NULL,
           filter(BLOCK_TYPE == "SEMESTER") %>%
           mutate(BLOCK_ID = as.numeric(SEM)) |> # Add semester block ID
           dplyr::group_by(YEAR, NESPP4, REGION_ID, LENGTH, AGE, SEM, SOURCE, BLOCK_ID) |> # semester group
-          dplyr::summarise(NO_AT_AGE = sum(NO_AT_AGE, na.rm = TRUE), .groups = "drop")
+          dplyr::summarise(NO_AT_AGE = sum(NO_AT_AGE, na.rm = TRUE), .groups = "drop") |> select(-SEM)
       } else{
         semester_borrowed <- NULL
       }
@@ -813,7 +807,7 @@ fillCF <- function(species_itis = NULL,
           filter(BLOCK_TYPE == "QUARTER") %>%
           mutate(BLOCK_ID = as.numeric(QTR)) %>% # add quarter block ID
           dplyr::group_by(YEAR, NESPP4, REGION_ID, LENGTH, AGE, QTR, SOURCE, BLOCK_ID) |> # quarter group
-          dplyr::summarise(NO_AT_AGE = sum(NO_AT_AGE, na.rm = TRUE), .groups = "drop")
+          dplyr::summarise(NO_AT_AGE = sum(NO_AT_AGE, na.rm = TRUE), .groups = "drop") |> select(-QTR)
       } else{
         quarter_borrowed <- NULL
       }
@@ -830,28 +824,29 @@ fillCF <- function(species_itis = NULL,
         dplyr::filter(NO_AT_AGE > 0) |>
         dplyr::select(SPECIES_ITIS, STOCK_ABBREV, SEX_TYPE, YEAR, REGION_ID, 
                       BLOCK_ID, LENGTH_UOM, LENGTH, AGE_UOM, AGE, 
-                      NO_AT_AGE, NESPP4, ASSESSMENT_ABBREV, SA_YEAR, SOURCE)
-        
-      
-      tab_ALK_HOLES <- borrowed_ages$all_fills |> 
-        dplyr::group_by(YEAR, NESPP4, REGION_ID, LENGTH, AGE, SEM, SOURCE) |> 
-        dplyr::summarise(NO_AT_AGE = sum(NO_AT_AGE, na.rm = TRUE), .groups = "drop") |>
-        dplyr::mutate(SPECIES_ITIS = species_itis, 
-                      STOCK_ABBREV = stock_abbrev, 
-                      SEX_TYPE = sex_type, 
-                      ASSESSMENT_ABBREV = assessment_abbrev, 
-                      SA_YEAR = assessment_year, 
-                      AGE_UOM = "YEAR", 
-                      LENGTH_UOM = "CM") |>
-        dplyr::filter(NO_AT_AGE > 0) |> 
-        left_join(select(tab_BLOCKS, YEAR, NESPP4, REGION_ID, BLOCK_TYPE), by = c("YEAR", "REGION_ID", "NESPP4"), relationship = "many-to-many") |> # Add block type for a given year, market category, and region_id 
-        mutate(BLOCK_ID = case_when(BLOCK_TYPE == "ANNUAL" ~ 1,
-                                    BLOCK_TYPE == "SEMESTER" ~ as.numeric(SEM),
-                                    BLOCK_TYPE == "QUARTER" ~ as.numeric(QTR))) |> # Add block id based on type
-        dplyr::select(SPECIES_ITIS, STOCK_ABBREV, SEX_TYPE, YEAR, REGION_ID, 
-                      BLOCK_ID, LENGTH_UOM, LENGTH, AGE_UOM, AGE, 
                       NO_AT_AGE, NESPP4, ASSESSMENT_ABBREV, SA_YEAR, SOURCE) |>
         arrange(YEAR)
+        
+      
+      # tab_ALK_HOLES <- borrowed_ages$all_fills |> 
+      #   dplyr::group_by(YEAR, NESPP4, REGION_ID, LENGTH, AGE, SEM, SOURCE) |> 
+      #   dplyr::summarise(NO_AT_AGE = sum(NO_AT_AGE, na.rm = TRUE), .groups = "drop") |>
+      #   dplyr::mutate(SPECIES_ITIS = species_itis, 
+      #                 STOCK_ABBREV = stock_abbrev, 
+      #                 SEX_TYPE = sex_type, 
+      #                 ASSESSMENT_ABBREV = assessment_abbrev, 
+      #                 SA_YEAR = assessment_year, 
+      #                 AGE_UOM = "YEAR", 
+      #                 LENGTH_UOM = "CM") |>
+      #   dplyr::filter(NO_AT_AGE > 0) |> 
+      #   left_join(select(tab_BLOCKS, YEAR, NESPP4, REGION_ID, BLOCK_TYPE), by = c("YEAR", "REGION_ID", "NESPP4"), relationship = "many-to-many") |> # Add block type for a given year, market category, and region_id 
+      #   mutate(BLOCK_ID = case_when(BLOCK_TYPE == "ANNUAL" ~ 1,
+      #                               BLOCK_TYPE == "SEMESTER" ~ as.numeric(SEM),
+      #                               BLOCK_TYPE == "QUARTER" ~ as.numeric(QTR))) |> # Add block id based on type
+      #   dplyr::select(SPECIES_ITIS, STOCK_ABBREV, SEX_TYPE, YEAR, REGION_ID, 
+      #                 BLOCK_ID, LENGTH_UOM, LENGTH, AGE_UOM, AGE, 
+      #                 NO_AT_AGE, NESPP4, ASSESSMENT_ABBREV, SA_YEAR, SOURCE) |>
+      #   arrange(YEAR)
     }
   } else{
     alk_unfilled <- NA # Required for subsequent check, will not describe remaining holes unless fill_alk == TRUE
