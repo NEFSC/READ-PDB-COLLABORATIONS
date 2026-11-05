@@ -29,6 +29,11 @@ borrow_ages <- function(missing_ages,
                         OB_ages,
                         borrow_procedure = "seqCFSV_S_A",
                         borrow_2020_option = FALSE){
+  
+  # If borrow_procedure not specified or set to NULL, set default
+  if(is.null(borrow_procedure)){
+    borrow_procedure <- "seqCFSV_S_A"
+  }
 
   ##### seqCFSV_S_A #####
   # Sequentially borrow: 1) Check no match available, 2) borrow CF within semester, 3) CF within year, 4) SV within semester, 5) SV within year 
@@ -146,7 +151,8 @@ borrow_ages <- function(missing_ages,
       dplyr::inner_join(donor_pool_CF |> dplyr::select(-NESPP4, -REGION_ID, -QTR) |> dplyr::distinct(), # Don't borrow based on NESPP4, REGION_ID, or QTR
                         by = c("YEAR", "LENGTH", "SEM"),
                         relationship = "many-to-many") |>
-      dplyr::mutate(SOURCE = paste0("CF_BORROW_MKTSEM_", SOURCE_BASE))
+      dplyr::mutate(SOURCE = paste0("CF_BORROW_MKTSEM_", SOURCE_BASE)) |>
+      left_join(missing_ages, relationship = "many-to-many") # Add back in NESPP4, REGION_ID, and QTR categories that were not used in borrowing but are used to define gaps
     
     all_fills <- dplyr::bind_rows(all_fills, fill_t1)
     
@@ -158,7 +164,8 @@ borrow_ages <- function(missing_ages,
       dplyr::inner_join(donor_pool_SV |> dplyr::select(-REGION_ID) |> dplyr::distinct(), # Don't borrow based on REGION_ID
                         by = c("YEAR", "LENGTH", "SEM"),
                         relationship = "many-to-many") |>
-      dplyr::mutate(SOURCE = paste0("SV_BORROW_SEM_", SOURCE_BASE))
+      dplyr::mutate(SOURCE = paste0("SV_BORROW_SEM_", SOURCE_BASE)) |>
+      left_join(still_needed, relationship = "many-to-many") # Add back in NESPP4, REGION_ID, and QTR categories that were not used in borrowing but are used to define gaps
     
     all_fills <- dplyr::bind_rows(all_fills, fill_t2)
     
@@ -170,7 +177,8 @@ borrow_ages <- function(missing_ages,
       dplyr::inner_join(donor_pool_CF |> dplyr::select(-NESPP4, -REGION_ID, -QTR, -SEM) |> dplyr::distinct(), # Don't borrow based on REGION_ID
                         by = c("YEAR", "LENGTH"),
                         relationship = "many-to-many") |>
-      dplyr::mutate(SOURCE = paste0("CF_BORROW_ANNUAL_", SOURCE_BASE))
+      dplyr::mutate(SOURCE = paste0("CF_BORROW_ANNUAL_", SOURCE_BASE)) |>
+      left_join(still_needed, relationship = "many-to-many") # Add back in NESPP4, REGION_ID, and QTR categories that were not used in borrowing but are used to define gaps
     
     all_fills <- dplyr::bind_rows(all_fills, fill_t3)
     
@@ -182,7 +190,8 @@ borrow_ages <- function(missing_ages,
       dplyr::inner_join(donor_pool_SV |> dplyr::select(-REGION_ID, -SEM) |> dplyr::distinct(), # Don't borrow based on REGION_ID or SEMESTER
                         by = c("YEAR", "LENGTH"),
                         relationship = "many-to-many") |>
-      dplyr::mutate(SOURCE = paste0("SV_BORROW_ANNUAL_", SOURCE_BASE))
+      dplyr::mutate(SOURCE = paste0("SV_BORROW_ANNUAL_", SOURCE_BASE)) |>
+      left_join(still_needed, relationship = "many-to-many") # Add back in NESPP4, REGION_ID, and QTR categories that were not used in borrowing but are used to define gaps
     
     all_fills <- dplyr::bind_rows(all_fills, fill_t4)
     
