@@ -605,6 +605,7 @@ fillCF <- function(species_itis = NULL,
              PROP.ANNUAL.COMLAND = LANDINGS_MT_ADJ/annual_landings) |>
       select(-annual_landings) |>
       filter(is.na(NO_AT_LENGTH))  # ID holes for blocks where landings occur but no lengths are sampled
+    holes <- length_holes # Rename so output matches output of optional prorating and ensures same name passed to borrow_lengths
     
     ###### Optional prorating ######
     # Add optional check where holes are prorated rather than filling with borrowing logic based on % of aggregate landings they represent
@@ -617,7 +618,7 @@ fillCF <- function(species_itis = NULL,
     ###### length imputations to fill holes ######
     if(nrow(holes) > 0) {
       
-      imputed_data_list <- borrow_lengths(missing_lengths = length_holes,
+      imputed_data_list <- borrow_lengths(missing_lengths = holes,
                                           borrow_procedure = tab_impute$borrow_procedure,
                                           borrowing_data = raw_lens)
       
