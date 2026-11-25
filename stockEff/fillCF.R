@@ -485,41 +485,38 @@ fillCF <- function(species_itis = NULL,
   
   if (isTRUE(tab_blocks$autofillLW)) {
     
-    # Calculate the terminal year of the current data range to fill gaps
-    max_data_yr <- max(as.numeric(data_years), na.rm = TRUE)
-    
-    # Standardize types and fill missing year ceilings
+    # Treat months and years as numeric and arrange so checks occurr in the following order: annual, semester, quarter
     tab_LW_clean <- tab_LW_PARAMS |> 
       dplyr::mutate(dplyr::across(
         dplyr::any_of(c("MONTH_START", "MONTH_END", "YEAR_START", "YEAR_END")), 
         as.numeric
       )) |> 
-      dplyr::mutate(YEAR_END = tidyr::replace_na(YEAR_END, max_data_yr)) |>
-      dplyr::arrange(dplyr::desc(LW_TYPE == "ANNUAL"))
+      dplyr::mutate(fill_order = factor(LW_TYPE, levels = c("ANNUAL", "SEMESTER", "QUARTER"))) |> 
+      dplyr::arrange(fill_order) # Check for overlap with annual, semester, then quarterly LW
+      
     
-    ### Temporal Intersection Check
-    # We loop through the standardized parameters and check for full containment
-    # Using as.numeric on the blocks side ensures we don't have character mismatches
-    for (i in seq_len(nrow(tab_LW_clean))) {
+    # ID blocks with month and year ranges that completely overlap with LW month and year ranges
+      # Loop over annual, semester, then quarterly LW so the finest temporal LW relationship used for block
+      # If block temporal resolution doesn't overlap with LW then LW_ID = NA (most likely if block doesn't fall within the year range for any annual LW)
+    for (i in seq_len(nrow(tab_LW_clean))) { # Loop over LW table organized by fill_order
       
       match_indices <- which(
-        as.numeric(tab_BLOCKS$MONTH_START) >= tab_LW_clean$MONTH_START[i] & 
-          as.numeric(tab_BLOCKS$MONTH_END)   <= tab_LW_clean$MONTH_END[i]   & 
-          as.numeric(tab_BLOCKS$YEAR)        >= tab_LW_clean$YEAR_START[i]  & 
-          as.numeric(tab_BLOCKS$YEAR)        <= tab_LW_clean$YEAR_END[i]
+        as.numeric(tab_BLOCKS$MONTH_START) %in% tab_LW_clean$MONTH_START[i]:tab_LW_clean$MONTH_END[i] &
+          as.numeric(tab_BLOCKS$MONTH_END) %in% tab_LW_clean$MONTH_START[i]:tab_LW_clean$MONTH_END[i] &
+          as.numeric(tab_BLOCKS$YEAR) %in% tab_LW_clean$YEAR_START[i]:tab_LW_clean$YEAR_END[i] 
       )
       
-      # Update the LW_ID for all blocks meeting the overlap criteria
+      # Update the LW_ID for all blocks meeting the overlap criteria (since loop over annual, semester, then quarter will update if finer resolution overlap is available, e.g. a block from month 2:3 is contained in an annual 1:12, semester 1:6, and quarter 1:3 LW but the final quarter option is used since it has the finest resolution)
       if (length(match_indices) > 0) {
         tab_BLOCKS$LW_ID[match_indices] <- as.character(tab_LW_clean$LW_ID[i])
       }
-    }
-  }
+    } # End loop over LW relationships
+  } # End autofillLW if statement
   
   tab_BLOCKS <- tab_BLOCKS |> 
     dplyr::select(SPECIES_ITIS, STOCK_ABBREV, SEX_TYPE, 
                   ASSESSMENT_ABBREV, SA_YEAR, YEAR, NESPP4, REGION_ID, 
-                  BLOCK_ID, BLOCK_TYPE, MONTH_START, MONTH_END, LW_ID)
+                  BLOCK_ID, BLOCK_TYPE, MONTH_START, MONTH_END, LW_ID) # LW_ID not populated by autofillLW = NA
   
   ##### LENGTH_IMPUTATIONS tab #####
   # Set up tab columns
