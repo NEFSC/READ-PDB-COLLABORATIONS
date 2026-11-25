@@ -37,7 +37,7 @@
 #' }
 #' @param tab_regions A list providing the following information to populate the REGIONS tab:
 #' \itemize{
-#'   \item{stat_areas - A list of stat area vectors by region, stat areas should be provided as strings. Example: list("1" = c("511", "512"))}
+#'   \item{stat_areas - A list of stat area vectors by region. Example: stat_areas = list("1" = c(511, 512), "2" = c(513, 514)}
 #'   \item{region_custom - An optional data.frame/matrix for complex cases. 
 #'         Example: data.frame(AREA = c(511, 512, 511), 
 #'                            REGION_ID = c("1", "1", "2"), 
@@ -63,7 +63,7 @@
 #' }
 #' @param tab_impute A list providing rules for filling sampling gaps in the LENGTH_IMPUTATIONS tab, tab_blocks$minLenSample used to ID holes requiring imputation, if null then no imputations provided (default):
 #' \itemize{
-#'   \item{prorate_percent - A threshold between 0-1 corresponding to the maximum percentage of landings that must occur in a block (0.05 = 5%), below which landings are prorated if no lengths are available for that block}
+#'   \item{prorate_percent - A threshold between 1-100 corresponding to the maximum percentage of landings that must occur in a block, below which landings are prorated if no lengths are available for that block}
 #'   \item{borrow_procedure - A vector specifying the type and order of borrowing logic to apply to provide length imputations, options include:
 #            Check documentation for borrow_lengths for most up-to-date borrowing options
 #'   }
@@ -72,9 +72,6 @@
 #' \itemize{
 #'   \item{fill_alk - A boolean. If TRUE, identifies lengths present in landings that 
 #'         lack corresponding age data and attempts to fill them using hierarchical borrowing. Default = FALSE.}
-#   \item{borrow_alk_years - A boolean. Default = FALSE. If TRUE, allows the ALK fill 
-#         logic to look at adjacent years (Year - 1 and Year + 1) as a final fallback 
-#         if no regional or survey ages are found for the current year.}
 #'   \item{source - A vector of strings identifying data sources for age data gap filling,options are: "commercial", "survey". Default = "commercial", MUST contain "commercial" or ALK borrowing will trigger error} 
 #'   \item{survey_strata - A vector of survey strata to include in borrowing, required if "survey" in source vector. No default.}
 #'   \item{borrow_procedure - A string specifying the borrowing logic to apply to fill age gaps for ALK, options include:
@@ -101,7 +98,7 @@
 #'         outside this range will be excluded. This is a powerful tool for removing 
 #'         extreme outliers that may be age-reading or data-entry errors.}
 #' }
-#' @param schema Set to "STOCKEFF_PRE_PROD" if using pre production data for assembly. Default is "STOCKEFF"
+#' @param schema Set to "STOCKEFF_PRE_PROD" if using pre production data for assembly and "STOCKEFF" for production data. Default is "STOCKEFF_PRE_PROD"
 #' @param outfile A string for the final exported file name, does NOT need to include .xlsx extention. No default.
 #' @param conn A DBI or ROracle connection object to the NEFSC Oracle database. 
 #'        If NULL (default), the function will prompt for credentials via rstudioapi 
@@ -265,15 +262,15 @@ fillCF <- function(species_itis = NULL,
                    tab_sex = NULL,
                    tab_impute = list(prorate_percent = NULL),
                    tab_alk = list(fill_alk = FALSE, 
-                                  borrow_alk_years = FALSE,
                                   source = "both"), # Options: "both", "commercial", "survey"
                    tab_exclusions = list(len_range = NULL, 
                                          age_range = NULL),
-                   schema = "STOCKEFF",
+                   schema = "STOCKEFF_PRE_PROD",
                    outfile = NULL,
                    conn = NULL,
                    optional_plots = FALSE){
-  
+
+  # R package Set-up  
   cli::cli_h1("STOCKEFF Specification Build {species_itis} {stock_abbrev} {assessment_abbrev} {assessment_year}")
   needed_pkgs <- c("tidyverse", "writexl", "DBI", "ROracle", 
                    "rstudioapi", "cli", "glue")
@@ -286,6 +283,7 @@ fillCF <- function(species_itis = NULL,
     stop("Process halted.")
   }
   
+  # ROracle connection in conn object  
   auto_disconnect <- FALSE
   if (is.null(conn)) {
     cli::cli_alert_info("Connecting to Oracle...")
@@ -303,7 +301,8 @@ fillCF <- function(species_itis = NULL,
   }
   
   if(class(try(ROracle::dbListResults(conn)))=="try-error") stop("Oracle connection is non functional - CHECK")
-  
+
+  # Set up defaults for lists  
   if(is.null(tab_blocks$autofillLW)) tab_blocks$autofillLW <- FALSE
   if(is.null(tab_blocks$check_missing)) tab_blocks$check_missing <- FALSE
   if(is.null(tab_blocks$mkt_missing)) tab_blocks$mkt_missing <- "keep"
@@ -343,7 +342,7 @@ fillCF <- function(species_itis = NULL,
   ##### REGIONS tab ##### 
   tab_REGIONS <- NULL
   
-  if (!is.null(tab_regions$region_custom)) {
+  if (!is.null(tab_regions$region_custom)) { # Use custom table to specify region by statistical area(s) and year
     cli::cli_alert_info("Using custom region mapping provided in 'region_custom'.")
     tab_REGIONS <- as.data.frame(tab_regions$region_custom)
     
@@ -355,15 +354,14 @@ fillCF <- function(species_itis = NULL,
       tab_REGIONS <- dplyr::rename(tab_REGIONS, AREA = area)
     }
     
-  } else if (!is.null(tab_regions$stat_areas)) {
-    # Standard hierarchical mapping from list for simple static cases
+  } else if (!is.null(tab_regions$stat_areas)) { # Use time-invariant region definition by statistical area(s)
     region_mapping <- purrr::imap_dfr(tab_regions$stat_areas, 
                                       \(x, y) data.frame(AREA = as.character(x), 
-                                                         REGION_ID = as.character(y)))
+                                                         REGION_ID = as.character(y))) # Standard area mapping to region(s) for use in all years
     
-    tab_REGIONS <- tidyr::expand_grid(AREA = region_mapping$AREA, 
+    tab_REGIONS <- tidyr::expand_grid(AREA = region_mapping$AREA, # Expand areas by years
                                       YEAR = data_years) |>
-      dplyr::left_join(region_mapping, by = "AREA")
+      dplyr::left_join(region_mapping, by = "AREA") # Tie areas to regions
   }
   
   if (is.null(tab_REGIONS)) {
@@ -395,9 +393,9 @@ fillCF <- function(species_itis = NULL,
   ### BLOCKS tab #####
   
   target_nespp4 <- stringr::str_pad(as.character(tab_blocks$nespp4), 
-                                    width = 4, side = "left", pad = "0")
+                                    width = 4, side = "left", pad = "0") # Treat as strings to ensure leading zeros in nespp4 codes are retained
   
-  # Source length sampling with no imputations (e.g. those introduced in length expansion)
+  # Load length sampling with no imputations (e.g. those introduced in length expansion)
   raw_lens <- tryCatch({
     sql1 <- glue::glue("SELECT YEAR, NESPP4, AREA, QTR, LENGTH, NO_AT_LENGTH 
                          FROM {schema}.mv_cf_stock_data_length_o 
@@ -405,15 +403,16 @@ fillCF <- function(species_itis = NULL,
                          AND year BETWEEN {min(data_years)} AND {max(data_years)}")
     ROracle::dbGetQuery(conn, sql1)
   }, error = function(e) { stop("Length query failed.") })
-  
+
+  # Format raw_lens and add regions
   raw_lens <- raw_lens |> 
     dplyr::filter(YEAR %in% data_years) |> # Only consider commercial data within data_years range of interest
-    dplyr::mutate(NESPP4 = as.character(NESPP4), 
+    dplyr::mutate(NESPP4 = as.character(NESPP4), # Ensure same column name/type for later use
                   AREA = stringr::str_trim(as.character(AREA)),
                   YEAR = as.numeric(YEAR), 
                   LENGTH = as.numeric(LENGTH)) |>
-    dplyr::filter(NESPP4 %in% target_nespp4) |>
-    dplyr::left_join(tab_REGIONS |> dplyr::select(AREA, YEAR, REGION_ID), 
+    dplyr::filter(NESPP4 %in% target_nespp4) |> # Only keep lengths for desired nespp4 codes
+    dplyr::left_join(tab_REGIONS |> dplyr::select(AREA, YEAR, REGION_ID), # Merge with region so lengths have region assigned
                      by = c("AREA", "YEAR"))
   
   if(tab_blocks$block_opt == "checkLENGTHS" | !is.null(tab_impute)){# Generate length sampling summary if checkLENGTHS for blocks OR providing length imputations
@@ -421,18 +420,18 @@ fillCF <- function(species_itis = NULL,
       dplyr::group_by(YEAR, NESPP4, REGION_ID) |>
       dplyr::summarise(
         q_pass = all(purrr::map_lgl(1:4, 
-                                    \(x) sum(NO_AT_LENGTH[QTR == x], na.rm = TRUE) >= tab_blocks$minLenSample)), # Check that all quarters have minLenSample
-        s_pass = (sum(NO_AT_LENGTH[QTR %in% c(1,2)], na.rm = TRUE) >= tab_blocks$minLenSample & 
+                                    \(x) sum(NO_AT_LENGTH[QTR == x], na.rm = TRUE) >= tab_blocks$minLenSample)), # ID quarters with minLenSample
+        s_pass = (sum(NO_AT_LENGTH[QTR %in% c(1,2)], na.rm = TRUE) >= tab_blocks$minLenSample & #ID semesters with minLenSample
                     sum(NO_AT_LENGTH[QTR %in% c(3,4)], na.rm = TRUE) >= tab_blocks$minLenSample),
-        a_pass = (sum(NO_AT_LENGTH, na.rm = TRUE) >= tab_blocks$minLenSample), 
+        a_pass = (sum(NO_AT_LENGTH, na.rm = TRUE) >= tab_blocks$minLenSample), # ID years with minLenSample
         .groups = "drop"
       ) |>
       dplyr::mutate(BLOCK_TYPE = dplyr::case_when(
-        is.na(REGION_ID) ~ "Insufficient_Samples", 
+        is.na(REGION_ID) ~ "Insufficient_Samples", # If no region ID assigned then insufficient samples
         q_pass ~ "QUARTER", 
         s_pass ~ "SEMESTER", 
         a_pass ~ "ANNUAL", 
-        .default = "Insufficient_Samples"
+        .default = "Insufficient_Samples" # If quarter, semester, and annual blocks have less than minLenSample, label as insufficent samples
       ))
   } # End if statement for summarizing length sampling 
 
@@ -456,7 +455,7 @@ fillCF <- function(species_itis = NULL,
                       BLOCK_TYPE == "SEMESTER" ~ MONTH_START + 5, 
                       BLOCK_TYPE == "ANNUAL" ~ 12
                     )) 
-  } else {
+  } else { # if tab_blocks$block_opt != "checkLENGTHS" then set up specified blocking
     block_configs <- list("QUARTER" = list(type = "QUARTER", 
                                            start = c(1,4,7,10), 
                                            offset = 2), 
@@ -482,13 +481,14 @@ fillCF <- function(species_itis = NULL,
     dplyr::mutate(SPECIES_ITIS = species_itis, STOCK_ABBREV = stock_abbrev, 
                   SEX_TYPE = sex_type, ASSESSMENT_ABBREV = assessment_abbrev, 
                   SA_YEAR = assessment_year, LW_ID = NA_character_)
-  
+
+  # If tab_blocks$autofillLW == TRUE then populate the blocking LW_ID using the month and year range specified in the tab_LW
   if (isTRUE(tab_blocks$autofillLW)) {
     
     # Treat months and years as numeric and arrange so checks occurr in the following order: annual, semester, quarter
     tab_LW_clean <- tab_LW_PARAMS |> 
       dplyr::mutate(dplyr::across(
-        dplyr::any_of(c("MONTH_START", "MONTH_END", "YEAR_START", "YEAR_END")), 
+        dplyr::any_of(c("MONTH_START", "MONTH_END", "YEAR_START", "YEAR_END")), # Ensure months and years are numeric
         as.numeric
       )) |> 
       dplyr::mutate(fill_order = factor(LW_TYPE, levels = c("ANNUAL", "SEMESTER", "QUARTER"))) |> 
@@ -508,7 +508,7 @@ fillCF <- function(species_itis = NULL,
       
       # Update the LW_ID for all blocks meeting the overlap criteria (since loop over annual, semester, then quarter will update if finer resolution overlap is available, e.g. a block from month 2:3 is contained in an annual 1:12, semester 1:6, and quarter 1:3 LW but the final quarter option is used since it has the finest resolution)
       if (length(match_indices) > 0) {
-        tab_BLOCKS$LW_ID[match_indices] <- as.character(tab_LW_clean$LW_ID[i])
+        tab_BLOCKS$LW_ID[match_indices] <- as.character(tab_LW_clean$LW_ID[i]) 
       }
     } # End loop over LW relationships
   } # End autofillLW if statement
@@ -527,7 +527,7 @@ fillCF <- function(species_itis = NULL,
                                        "LENGTH_UOM", "LENGTH", "NO_AT_LENGTH", "SOURCE"))
   
   if(!is.null(tab_impute)) {
-    cli::cli_alert_info("Scanning for sampling gaps using hierarchical borrowing...")
+    cli::cli_alert_info("Scanning for length sampling gaps to fill using selected borrowing procedure...")
     
     ###### Query landings to check for holes ######
     landings <- tryCatch({
@@ -546,46 +546,46 @@ fillCF <- function(species_itis = NULL,
     
     ###### ID holes where landings exist but no length measurements are available ######
     # Calculate number of lengths across all possible blocking structures
-    ann_lens <- raw_lens |> 
+    ann_lens <- raw_lens |> # Annual length summary
       group_by(YEAR, NESPP4, REGION_ID) |> 
       dplyr::reframe(NO_AT_LENGTH = sum(NO_AT_LENGTH, na.rm = TRUE), BLOCK_TYPE = "ANNUAL", BLOCK_ID = 1) 
     
-    sem_lens <- raw_lens |> 
+    sem_lens <- raw_lens |> # Semester length summary
       mutate(BLOCK_ID = case_when(QTR %in% c(1,2) ~ 1,
                                   QTR %in% c(3,4) ~ 2)) %>%
       group_by(YEAR, NESPP4, REGION_ID, BLOCK_ID) |>
       dplyr::reframe(NO_AT_LENGTH = sum(NO_AT_LENGTH, na.rm = TRUE), BLOCK_TYPE = "SEMESTER")
     
-    qtr_lens <- raw_lens |>
+    qtr_lens <- raw_lens |> # Quarterly length summary
       group_by(YEAR, NESPP4, REGION_ID, QTR) |>
       dplyr::reframe(NO_AT_LENGTH = sum(NO_AT_LENGTH, na.rm = TRUE), BLOCK_TYPE = "QUARTER", BLOCK_ID = as.numeric(QTR)) |> # BLOCK_ID causes duplicate rows since QTR is not reframed
       distinct()|>
       select(-QTR)
     # Combine lengths with blocking
-    len_blocks <- bind_rows(ann_lens, sem_lens, qtr_lens) %>%
-      right_join(tab_BLOCKS)
+    len_blocks <- bind_rows(ann_lens, sem_lens, qtr_lens) %>% 
+      right_join(tab_BLOCKS) # Matches length summary to chosen blocking structure (allows different summaries for different years or NESPP4 codes)
     
     # Calculate total landings across all possible blocking structures
-    ann_land <- landings |>
+    ann_land <- landings |> # Annual total landings
       group_by(YEAR, NESPP4, REGION_ID) |>
       dplyr::reframe(LANDINGS_MT_ADJ = sum(LANDINGS_KG_ADJ, na.rm = TRUE)/1000, BLOCK_TYPE = "ANNUAL", BLOCK_ID = 1)
     
-    sem_land <- landings |> 
+    sem_land <- landings |> # Semester total landings
       mutate(BLOCK_ID = case_when(QTR %in% c(1,2) ~ 1,
                                   QTR %in% c(3,4) ~ 2)) %>%
       group_by(YEAR, NESPP4, REGION_ID, BLOCK_ID) |>
       dplyr::reframe(LANDINGS_MT_ADJ = sum(LANDINGS_KG_ADJ, na.rm = TRUE)/1000, BLOCK_TYPE = "SEMESTER")
     
-    qtr_land <- landings |>
+    qtr_land <- landings |> # Quarterly total landings
       group_by(YEAR, NESPP4, REGION_ID, QTR) |>
       dplyr::reframe(LANDINGS_MT_ADJ = sum(LANDINGS_KG_ADJ, na.rm = TRUE)/1000, BLOCK_TYPE = "QUARTER", BLOCK_ID = as.numeric(QTR)) |> # BLOCK_ID causes duplicate rows since QTR is not reframed
       distinct()|>
       select(-QTR)
     # Combine total landings with blocking
     land_blocks <- bind_rows(ann_land, sem_land, qtr_land) %>%
-      right_join(tab_BLOCKS)
+      right_join(tab_BLOCKS) # Matches total landings to chosen blocking structure (allows total landings to be calculated over different blocks for different years or NESPP4 codes)
     
-    # # Check consistency - pass for scup, all landings successfully joined to blocking
+    # # Development check consistency - pass for scup, all landings successfully joined to blocking
     # bind_rows(ann_land, sem_land, qtr_land) %>%
     #        right_join(tab_BLOCKS) %>% 
     #   #filter(YEAR == 2022, NESPP4 == 3293) %>% 
@@ -596,10 +596,10 @@ fillCF <- function(species_itis = NULL,
     #   #filter(YEAR == 2022, NESPP4 == 3293) %>% 
     #   select(LANDINGS_KG_ADJ) %>% sum(., na.rm = TRUE)/1000 #!!! NO NESPP4 3293 block in 2022 but some landings, why?
     
-    length_holes <- full_join(land_blocks, len_blocks) |>
+    length_holes <- full_join(land_blocks, len_blocks) |> # Combine length summary and total landings by block
       group_by(YEAR) |>
       mutate(annual_landings = sum(LANDINGS_MT_ADJ, na.rm = TRUE),
-             PROP.ANNUAL.COMLAND = LANDINGS_MT_ADJ/annual_landings) |>
+             PROP.ANNUAL.COMLAND = LANDINGS_MT_ADJ/annual_landings) |> # Calculate proportion of total annual landings in each block
       select(-annual_landings) |>
       filter(is.na(NO_AT_LENGTH))  # ID holes for blocks where landings occur but no lengths are sampled
     holes <- length_holes # Rename so output matches output of optional prorating and ensures same name passed to borrow_lengths
@@ -607,8 +607,8 @@ fillCF <- function(species_itis = NULL,
     ###### Optional prorating ######
     # Add optional check where holes are prorated rather than filling with borrowing logic based on % of aggregate landings they represent
     if(!is.null(tab_impute$prorate_percent)){ # If a percentage was provided to tab_impute$prorate_percent then apply as a filter and prorate holes !!! need to add to documentation and ensure default = NULL once finalized
-      holes <- length_holes %>% filter(PROP.ANNUAL.COMLAND > tab_impute$prorate_percent) # Retain holes that exceed % contribution to aggregate landings threshold and fill with borrowing
-      prorate_holes <- length_holes %>% filter(PROP.ANNUAL.COMLAND <= tab_impute$prorate_percent) # ID blocks to prorate
+      holes <- length_holes %>% filter(PROP.ANNUAL.COMLAND > tab_impute$prorate_percent/100) # Retain holes that exceed % contribution to aggregate landings threshold and fill with borrowing
+      prorate_holes <- length_holes %>% filter(PROP.ANNUAL.COMLAND <= tab_impute$prorate_percent/100) # ID blocks to prorate
       tab_BLOCKS <- anti_join(tab_BLOCKS, prorate_holes) # Drop all blocks below threshold that do not have length measurements so prorated
     }
     
