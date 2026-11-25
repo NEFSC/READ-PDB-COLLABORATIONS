@@ -273,7 +273,8 @@ fillCF <- function(species_itis = NULL,
                    outfile = NULL,
                    conn = NULL,
                    optional_plots = FALSE){
-  
+
+  # R package Set-up  
   cli::cli_h1("STOCKEFF Specification Build {species_itis} {stock_abbrev} {assessment_abbrev} {assessment_year}")
   needed_pkgs <- c("tidyverse", "writexl", "DBI", "ROracle", 
                    "rstudioapi", "cli", "glue")
@@ -286,6 +287,7 @@ fillCF <- function(species_itis = NULL,
     stop("Process halted.")
   }
   
+  # ROracle connection in conn object  
   auto_disconnect <- FALSE
   if (is.null(conn)) {
     cli::cli_alert_info("Connecting to Oracle...")
@@ -303,7 +305,8 @@ fillCF <- function(species_itis = NULL,
   }
   
   if(class(try(ROracle::dbListResults(conn)))=="try-error") stop("Oracle connection is non functional - CHECK")
-  
+
+  # Set up defaults for lists  
   if(is.null(tab_blocks$autofillLW)) tab_blocks$autofillLW <- FALSE
   if(is.null(tab_blocks$check_missing)) tab_blocks$check_missing <- FALSE
   if(is.null(tab_blocks$mkt_missing)) tab_blocks$mkt_missing <- "keep"
